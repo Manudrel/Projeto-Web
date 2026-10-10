@@ -1,27 +1,18 @@
-import {
-  Controller,
-  DefaultValuePipe,
-  Get,
-  ParseEnumPipe,
-  ParseIntPipe,
-  Query,
-} from '@nestjs/common';
-import { NivelCurso } from './curso.entity.js';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { CursoService } from './curso.service.js';
+import { ListarCursosDto } from './dto/listar-cursos.dto.js';
 
 @Controller('cursos')
 export class CursoController {
   constructor(private readonly cursoService: CursoService) {}
 
   @Get()
-  findAll(
-    @Query('pagina', new DefaultValuePipe(1), ParseIntPipe) pagina: number,
-    @Query('limite', new DefaultValuePipe(20), ParseIntPipe) limite: number,
-    @Query('categoriaId', new ParseIntPipe({ optional: true }))
-    categoriaId?: number,
-    @Query('nivel', new ParseEnumPipe(NivelCurso, { optional: true }))
-    nivel?: NivelCurso,
-  ) {
-    return this.cursoService.findAll({ categoriaId, nivel }, pagina, limite);
+  findAll(@Query() filtros: ListarCursosDto) {
+    return this.cursoService.findAll(filtros);
+  }
+
+  @Get(':id')
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.cursoService.findById(id);
   }
 }

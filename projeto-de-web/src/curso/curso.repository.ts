@@ -1,17 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
-import { NivelCurso } from './curso.entity.js';
-
-export interface FiltrosCurso {
-  categoriaId?: number;
-  nivel?: NivelCurso;
-}
+import { ListarCursosDto } from './dto/listar-cursos.dto.js';
 
 @Injectable()
 export class CursoRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
-  findAll(filtros: FiltrosCurso, pagina: number, limite: number) {
+  findAll(filtros: ListarCursosDto) {
     const query = this.db('courses');
 
     if (filtros.categoriaId) query.where('category_id', filtros.categoriaId);
@@ -20,7 +15,11 @@ export class CursoRepository {
     return query
       .select('*')
       .orderBy('id')
-      .limit(limite)
-      .offset((pagina - 1) * limite);
+      .limit(filtros.limite)
+      .offset((filtros.pagina - 1) * filtros.limite);
+  }
+
+  findById(id: number) {
+    return this.db('courses').where('id', id).first();
   }
 }
