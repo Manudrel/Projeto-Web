@@ -7,6 +7,7 @@ import {
 import { CursoRepository } from './curso.repository.js';
 import { CreateCursoDto } from './dto/create-curso.dto.js';
 import { ListarCursosDto } from './dto/listar-cursos.dto.js';
+import { UpdateCursoDto } from './dto/update-curso.dto.js';
 
 @Injectable()
 export class CursoService {
@@ -54,5 +55,52 @@ export class CursoService {
     }
 
     return this.cursoRepository.create(dados);
+  }
+
+  async update(id: number, dados: UpdateCursoDto) {
+    const curso = await this.cursoRepository.findById(id);
+
+    if (!curso) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    const mudouCategoria =
+      dados.categoriaId !== undefined &&
+      dados.categoriaId !== curso.category_id;
+    const mudouTitulo =
+      dados.titulo !== undefined && dados.titulo !== curso.title;
+
+    if (mudouCategoria) {
+      const categoria = await this.cursoRepository.findCategoriaById(
+        dados.categoriaId!,
+      );
+
+      if (!categoria) {
+        throw new NotFoundException('Categoria não encontrada');
+      }
+
+      if (categoria.status !== 'ACTIVE') {
+        throw new BadRequestException(
+          'Não é possível mover o curso para uma categoria inativa',
+        );
+      }
+    }
+
+    if (mudouCategoria || mudouTitulo) {
+      const cursoComMesmoTitulo =
+        await this.cursoRepository.findByTituloECategoria(
+          dados.titulo ?? curso.title,
+          dados.categoriaId ?? curso.category_id,
+          id,
+        );
+
+      if (cursoComMesmoTitulo) {
+        throw new ConflictException(
+          'Já existe um curso com esse título nessa categoria',
+        );
+      }
+    }
+
+    return this.cursoRepository.update(id, dados);
   }
 }

@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { CreateCursoDto } from './dto/create-curso.dto.js';
 import { ListarCursosDto } from './dto/listar-cursos.dto.js';
+import { UpdateCursoDto } from './dto/update-curso.dto.js';
 
 @Injectable()
 export class CursoRepository {
@@ -28,11 +29,18 @@ export class CursoRepository {
     return this.db('categories').where('id', id).first();
   }
 
-  findByTituloECategoria(titulo: string, categoriaId: number) {
-    return this.db('courses')
+  findByTituloECategoria(
+    titulo: string,
+    categoriaId: number,
+    ignorarCursoId?: number,
+  ) {
+    const query = this.db('courses')
       .whereRaw('LOWER(title) = LOWER(?)', [titulo])
-      .where('category_id', categoriaId)
-      .first();
+      .where('category_id', categoriaId);
+
+    if (ignorarCursoId) query.whereNot('id', ignorarCursoId);
+
+    return query.first();
   }
 
   async create(dados: CreateCursoDto) {
@@ -44,6 +52,23 @@ export class CursoRepository {
         instructor_id: dados.instrutorId,
         level: dados.nivel,
         workload_hours: dados.cargaHoraria,
+      })
+      .returning('*');
+
+    return curso;
+  }
+
+  async update(id: number, dados: UpdateCursoDto) {
+    const [curso] = await this.db('courses')
+      .where('id', id)
+      .update({
+        title: dados.titulo,
+        description: dados.descricao,
+        category_id: dados.categoriaId,
+        instructor_id: dados.instrutorId,
+        level: dados.nivel,
+        workload_hours: dados.cargaHoraria,
+        updated_at: this.db.fn.now(),
       })
       .returning('*');
 
