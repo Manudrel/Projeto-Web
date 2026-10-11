@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { CreateCourseDto } from './dto/create-course.dto.js';
+import { ListCourseModulesDto } from './dto/list-course-modules.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
@@ -113,5 +114,20 @@ export class CoursesRepository {
       .returning('*');
 
     return course;
+  }
+
+  findModulesByCourse(courseId: number, filters: ListCourseModulesDto) {
+    const query = this.db('modules')
+      .where('courseId', courseId)
+      .whereNull('deletedAt');
+
+    if (filters.status) query.where('status', filters.status);
+    if (filters.order) query.where('order', filters.order);
+
+    return query
+      .select('*')
+      .orderBy('order')
+      .limit(filters.limit)
+      .offset((filters.page - 1) * filters.limit);
   }
 }

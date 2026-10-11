@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { CoursesRepository } from './courses.repository.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
+import { ListCourseModulesDto } from './dto/list-course-modules.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
@@ -165,5 +166,15 @@ export class CoursesService {
     }
 
     return this.coursesRepository.unpublish(id);
+  }
+
+  async findModules(id: number, filters: ListCourseModulesDto) {
+    const course = await this.coursesRepository.findById(id);
+
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    return this.coursesRepository.findModulesByCourse(id, filters);
   }
 }

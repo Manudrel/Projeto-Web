@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { CoursesService } from './courses.service.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
+import { ListCourseModulesDto } from './dto/list-course-modules.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
@@ -32,6 +33,14 @@ export class CoursesController {
   @Get(':id')
   findById(@Param('id', idPipe) id: number) {
     return this.coursesService.findById(id);
+  }
+
+  @Get(':id/modules')
+  findModules(
+    @Param('id', idPipe) id: number,
+    @Query() filters: ListCourseModulesDto,
+  ) {
+    return this.coursesService.findModules(id, filters);
   }
 
   @Post()
