@@ -143,4 +143,27 @@ export class CoursesService {
 
     return this.coursesRepository.publish(id);
   }
+
+  async unpublish(id: number) {
+    const course = await this.coursesRepository.findById(id);
+
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    if (!course.isPublished) {
+      throw new BadRequestException('O curso não está publicado');
+    }
+
+    const activeEnrollment =
+      await this.coursesRepository.findActiveEnrollmentByCourse(id);
+
+    if (activeEnrollment) {
+      throw new BadRequestException(
+        'Não é possível despublicar um curso com alunos matriculados',
+      );
+    }
+
+    return this.coursesRepository.unpublish(id);
+  }
 }

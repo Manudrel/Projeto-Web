@@ -105,4 +105,13 @@ export class CoursesRepository {
 
     return course;
   }
+
+  async unpublish(id: number) {
+    const [course] = await this.db('courses')
+      .where('id', id)
+      .update({ isPublished: false, updatedAt: this.db.fn.now() })
+      .returning('*');
+
+    return course;
+  }
 }
