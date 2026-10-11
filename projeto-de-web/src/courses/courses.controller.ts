@@ -14,6 +14,7 @@ import {
 import { CoursesService } from './courses.service.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { ListCourseModulesDto } from './dto/list-course-modules.dto.js';
+import { ListCourseStudentsDto } from './dto/list-course-students.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
@@ -41,6 +42,14 @@ export class CoursesController {
     @Query() filters: ListCourseModulesDto,
   ) {
     return this.coursesService.findModules(id, filters);
+  }
+
+  @Get(':id/students')
+  findStudents(
+    @Param('id', idPipe) id: number,
+    @Query() filters: ListCourseStudentsDto,
+  ) {
+    return this.coursesService.findStudents(id, filters);
   }
 
   @Post()

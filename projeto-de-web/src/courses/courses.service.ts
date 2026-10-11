@@ -7,6 +7,7 @@ import {
 import { CoursesRepository } from './courses.repository.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { ListCourseModulesDto } from './dto/list-course-modules.dto.js';
+import { ListCourseStudentsDto } from './dto/list-course-students.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
@@ -176,5 +177,15 @@ export class CoursesService {
     }
 
     return this.coursesRepository.findModulesByCourse(id, filters);
+  }
+
+  async findStudents(id: number, filters: ListCourseStudentsDto) {
+    const course = await this.coursesRepository.findById(id);
+
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    return this.coursesRepository.findStudentsByCourse(id, filters);
   }
 }

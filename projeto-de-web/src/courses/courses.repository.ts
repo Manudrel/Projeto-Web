@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { ListCourseModulesDto } from './dto/list-course-modules.dto.js';
+import { ListCourseStudentsDto } from './dto/list-course-students.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
@@ -127,6 +128,33 @@ export class CoursesRepository {
     return query
       .select('*')
       .orderBy('order')
+      .limit(filters.limit)
+      .offset((filters.page - 1) * filters.limit);
+  }
+
+  findStudentsByCourse(courseId: number, filters: ListCourseStudentsDto) {
+    const query = this.db('enrollments')
+      .join('users', 'users.id', 'enrollments.userId')
+      .where('enrollments.courseId', courseId)
+      .whereNull('enrollments.deletedAt')
+      .whereNull('users.deletedAt');
+
+    if (filters.status) query.where('enrollments.status', filters.status);
+    if (filters.progress !== undefined) {
+      query.where('enrollments.progress', '>=', filters.progress);
+    }
+
+    return query
+      .select(
+        'users.id',
+        'users.name',
+        'users.email',
+        'enrollments.id as enrollmentId',
+        'enrollments.status',
+        'enrollments.progress',
+        'enrollments.createdAt as enrolledAt',
+      )
+      .orderBy('users.name')
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
