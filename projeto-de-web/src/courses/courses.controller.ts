@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
@@ -40,5 +42,11 @@ export class CoursesController {
   @Patch(':id')
   update(@Param('id', idPipe) id: number, @Body() data: UpdateCourseDto) {
     return this.coursesService.update(id, data);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  delete(@Param('id', idPipe) id: number) {
+    return this.coursesService.delete(id);
   }
 }

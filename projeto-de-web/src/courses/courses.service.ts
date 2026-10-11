@@ -102,4 +102,23 @@ export class CoursesService {
 
     return this.coursesRepository.update(id, data);
   }
+
+  async delete(id: number) {
+    const course = await this.coursesRepository.findById(id);
+
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    const activeEnrollment =
+      await this.coursesRepository.findActiveEnrollmentByCourse(id);
+
+    if (activeEnrollment) {
+      throw new BadRequestException(
+        'Não é possível excluir um curso com alunos matriculados',
+      );
+    }
+
+    await this.coursesRepository.delete(id);
+  }
 }

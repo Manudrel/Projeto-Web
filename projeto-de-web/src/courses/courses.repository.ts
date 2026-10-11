@@ -73,4 +73,18 @@ export class CoursesRepository {
 
     return course;
   }
+
+  findActiveEnrollmentByCourse(courseId: number) {
+    return this.db('enrollments')
+      .where('courseId', courseId)
+      .where('status', 'ACTIVE')
+      .whereNull('deletedAt')
+      .first();
+  }
+
+  async delete(id: number) {
+    await this.db('courses')
+      .where('id', id)
+      .update({ deletedAt: this.db.fn.now() });
+  }
 }
