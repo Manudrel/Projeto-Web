@@ -44,6 +44,11 @@ export class CoursesController {
     return this.coursesService.update(id, data);
   }
 
+  @Patch(':id/publish')
+  publish(@Param('id', idPipe) id: number) {
+    return this.coursesService.publish(id);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   delete(@Param('id', idPipe) id: number) {

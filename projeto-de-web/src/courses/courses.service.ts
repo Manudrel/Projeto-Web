@@ -121,4 +121,26 @@ export class CoursesService {
 
     await this.coursesRepository.delete(id);
   }
+
+  async publish(id: number) {
+    const course = await this.coursesRepository.findById(id);
+
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    if (course.isPublished) {
+      throw new BadRequestException('O curso já está publicado');
+    }
+
+    const lesson = await this.coursesRepository.findLessonByCourse(id);
+
+    if (!lesson) {
+      throw new BadRequestException(
+        'O curso precisa ter pelo menos um módulo com aula para ser publicado',
+      );
+    }
+
+    return this.coursesRepository.publish(id);
+  }
 }

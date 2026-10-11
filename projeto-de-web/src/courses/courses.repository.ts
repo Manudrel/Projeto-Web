@@ -87,4 +87,22 @@ export class CoursesRepository {
       .where('id', id)
       .update({ deletedAt: this.db.fn.now() });
   }
+
+  findLessonByCourse(courseId: number) {
+    return this.db('lessons')
+      .join('modules', 'modules.id', 'lessons.moduleId')
+      .where('modules.courseId', courseId)
+      .whereNull('modules.deletedAt')
+      .whereNull('lessons.deletedAt')
+      .first('lessons.id');
+  }
+
+  async publish(id: number) {
+    const [course] = await this.db('courses')
+      .where('id', id)
+      .update({ isPublished: true, updatedAt: this.db.fn.now() })
+      .returning('*');
+
+    return course;
+  }
 }
