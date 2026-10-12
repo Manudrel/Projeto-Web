@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Min } from 'class-validator';
-import { ModuleStatus } from '../module.entity.js';
+import { ModuleStatus } from '../course-module.entity.js';
 
 export class ListModulesDto {
   @IsOptional()

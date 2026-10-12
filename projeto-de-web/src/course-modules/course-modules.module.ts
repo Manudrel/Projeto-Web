@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import knex from 'knex';
-import { ModulesController } from './modules.controller.js';
-import { ModulesRepository } from './modules.repository.js';
-import { ModulesService } from './modules.service.js';
+import { CourseModulesController } from './course-modules.controller.js';
+import { CourseModulesRepository } from './course-modules.repository.js';
+import { CourseModulesService } from './course-modules.service.js';
 
 @Module({
-  controllers: [ModulesController],
+  controllers: [CourseModulesController],
   providers: [
-    ModulesService,
-    ModulesRepository,
+    CourseModulesService,
+    CourseModulesRepository,
     {
       provide: 'KNEX',
       useFactory: () =>
@@ -25,4 +25,4 @@ import { ModulesService } from './modules.service.js';
     },
   ],
 })
-export class ModulesModule {}
+export class CourseModulesModule {}

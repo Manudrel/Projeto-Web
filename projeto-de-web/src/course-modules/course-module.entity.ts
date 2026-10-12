@@ -3,7 +3,7 @@ export enum ModuleStatus {
   INACTIVE = 'INACTIVE',
 }
 
-export interface Module {
+export interface CourseModule {
   id: number;
   courseId: number;
   title: string;

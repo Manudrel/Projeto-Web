@@ -1,22 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ListModulesDto } from './dto/list-modules.dto.js';
-import { ModulesRepository } from './modules.repository.js';
+import { CourseModulesRepository } from './course-modules.repository.js';
 
 @Injectable()
-export class ModulesService {
-  constructor(private readonly modulesRepository: ModulesRepository) {}
+export class CourseModulesService {
+  constructor(
+    private readonly courseModulesRepository: CourseModulesRepository,
+  ) {}
 
   findAll(filters: ListModulesDto) {
-    return this.modulesRepository.findAll(filters);
+    return this.courseModulesRepository.findAll(filters);
   }
 
   async findById(id: number) {
-    const module = await this.modulesRepository.findById(id);
+    const courseModule = await this.courseModulesRepository.findById(id);
 
-    if (!module) {
+    if (!courseModule) {
       throw new NotFoundException('Módulo não encontrado');
     }
 
-    return module;
+    return courseModule;
   }
 }

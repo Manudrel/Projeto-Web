@@ -7,23 +7,23 @@ import {
   Query,
 } from '@nestjs/common';
 import { ListModulesDto } from './dto/list-modules.dto.js';
-import { ModulesService } from './modules.service.js';
+import { CourseModulesService } from './course-modules.service.js';
 
 const idPipe = new ParseIntPipe({
   exceptionFactory: () => new BadRequestException('O id deve ser um número'),
 });
 
 @Controller('modules')
-export class ModulesController {
-  constructor(private readonly modulesService: ModulesService) {}
+export class CourseModulesController {
+  constructor(private readonly courseModulesService: CourseModulesService) {}
 
   @Get()
   findAll(@Query() filters: ListModulesDto) {
-    return this.modulesService.findAll(filters);
+    return this.courseModulesService.findAll(filters);
   }
 
   @Get(':id')
   findById(@Param('id', idPipe) id: number) {
-    return this.modulesService.findById(id);
+    return this.courseModulesService.findById(id);
   }
 }

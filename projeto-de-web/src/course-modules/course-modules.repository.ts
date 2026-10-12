@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { ListModulesDto } from './dto/list-modules.dto.js';
 
 @Injectable()
-export class ModulesRepository {
+export class CourseModulesRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
   findAll(filters: ListModulesDto) {
