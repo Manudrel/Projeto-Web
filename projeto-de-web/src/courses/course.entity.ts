@@ -1,19 +1,18 @@
-export enum NivelCurso {
+export enum CourseLevel {
   BEGINNER = 'BEGINNER',
   INTERMEDIATE = 'INTERMEDIATE',
   ADVANCED = 'ADVANCED',
 }
 
-export interface Curso {
+export interface Course {
   id: number;
   title: string;
   description: string;
   categoryId: number;
   instructorId: number;
-  level: NivelCurso;
-  workloadHours: number;
+  level: CourseLevel;
   isPublished: boolean;
-  publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 }
