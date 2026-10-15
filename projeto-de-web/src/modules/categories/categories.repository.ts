@@ -4,18 +4,33 @@ import { CategoryStatus } from './category.entity.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 
+const categoryColumns = [
+  'id',
+  'name',
+  'description',
+  'status',
+  'created_at as createdAt',
+  'updated_at as updatedAt',
+  'deleted_at as deletedAt',
+];
+
 @Injectable()
 export class CategoriesRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) { }
 
   findById(id: number) {
-    return this.db('categories').where('id', id).whereNull('deletedAt').first();
+    return this.db('categories')
+      .where('id', id)
+      .whereNull('deleted_at')
+      .select(categoryColumns)
+      .first();
   }
 
   findByName(name: string, ignoreCategoryId?: number) {
     const query = this.db('categories')
       .whereRaw('LOWER(name) = LOWER(?)', [name])
-      .whereNull('deletedAt');
+      .whereNull('deleted_at')
+      .select(categoryColumns);
 
     if (ignoreCategoryId) query.whereNot('id', ignoreCategoryId);
 
@@ -24,9 +39,9 @@ export class CategoriesRepository {
 
   findPublishedCourseByCategory(categoryId: number) {
     return this.db('courses')
-      .where('categoryId', categoryId)
-      .where('isPublished', true)
-      .whereNull('deletedAt')
+      .where('category_id', categoryId)
+      .where('is_published', true)
+      .whereNull('deleted_at')
       .first();
   }
 
@@ -37,7 +52,7 @@ export class CategoriesRepository {
         description: data.description,
         status: CategoryStatus.ACTIVE,
       })
-      .returning('*');
+      .returning(categoryColumns);
 
     return category;
   }
@@ -49,9 +64,9 @@ export class CategoriesRepository {
         name: data.name,
         description: data.description,
         status: data.status,
-        updatedAt: this.db.fn.now(),
+        updated_at: this.db.fn.now(),
       })
-      .returning('*');
+      .returning(categoryColumns);
 
     return category;
   }
@@ -59,6 +74,6 @@ export class CategoriesRepository {
   async delete(id: number) {
     await this.db('categories')
       .where('id', id)
-      .update({ deletedAt: this.db.fn.now() });
+      .update({ deleted_at: this.db.fn.now() });
   }
 }
