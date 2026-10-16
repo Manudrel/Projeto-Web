@@ -7,6 +7,8 @@ import {
   Query,
   Body,
   Patch,
+  HttpCode,
+  Delete,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -56,5 +58,14 @@ export class CourseModulesController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.courseModulesService.update(id, data, user);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  delete(
+    @Param('id', idPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.courseModulesService.delete(id, user);
   }
 }

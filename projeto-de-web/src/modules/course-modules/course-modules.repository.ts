@@ -38,8 +38,6 @@ export class CourseModulesRepository {
       .whereNull('deleted_at')
       .select(moduleColumns)
       .first();
-<<<<<<< HEAD
-=======
   }
 
   findCourseById(courseId: number) {
@@ -89,6 +87,16 @@ export class CourseModulesRepository {
     });
   }
 
+  async delete(id: number, courseId: number, currentOrder: number) {
+    await this.db.transaction(async (trx) => {
+      await trx('modules')
+        .where('id', id)
+        .update({ deleted_at: trx.fn.now() });
+
+      await this.shiftOrders(trx, courseId, currentOrder + 1, undefined, -1);
+    });
+  }
+
   private async shiftOrders(trx: Knex.Transaction, courseId: number, from: number, to: number | undefined, offset: number) {
     const affected = trx('modules')
       .where('course_id', courseId)
@@ -104,6 +112,5 @@ export class CourseModulesRepository {
       .whereNull('deleted_at')
       .where('order', '<', 0)
       .update({ order: trx.raw('-"order" + ?', [offset]) });
->>>>>>> bb4e730 (feat(modules): endpoint PATCH atualizar)
   }
 }

@@ -50,6 +50,14 @@ export class CourseModulesService {
     return this.courseModulesRepository.update(id, courseModule.courseId, courseModule.order, data);
   }
 
+  async delete(id: number, user: AuthenticatedUser) {
+    const courseModule = await this.findById(id);
+
+    await this.ensureCanManage(courseModule.courseId, user);
+
+    await this.courseModulesRepository.delete(id, courseModule.courseId, courseModule.order);
+  }
+
   private async ensureCanManage(courseId: number, user: AuthenticatedUser) {
     const course = await this.courseModulesRepository.findCourseById(courseId);
 
