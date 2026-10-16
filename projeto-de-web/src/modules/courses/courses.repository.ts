@@ -24,7 +24,7 @@ const moduleColumns = [
   'id',
   'course_id as courseId',
   'title',
-  'content',
+  'description',
   'order',
   'status',
   'created_at as createdAt',
@@ -219,7 +219,7 @@ export class CoursesRepository {
         'progress.completed',
         'progress.completed_at as completedAt',
       )
-      .orderBy(['users.name', 'lessons.order'])
+      .orderBy(['users.name', 'lessons.id'])
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
