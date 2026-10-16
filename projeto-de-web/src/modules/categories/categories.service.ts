@@ -3,11 +3,26 @@ import { CategoriesRepository } from './categories.repository.js';
 import { CategoryStatus } from './category.entity.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { ListCategoriesDto } from './dto/list-categories.dto.js';
 
 @Injectable()
 export class CategoriesService {
 
   constructor(private readonly categoriesRepository: CategoriesRepository) { }
+
+  findAll(filters: ListCategoriesDto) {
+    return this.categoriesRepository.findAll(filters);
+  }
+
+  async findById(id: number) {
+    const category = await this.categoriesRepository.findById(id);
+
+    if (!category) {
+      throw new NotFoundException('Categoria não encontrada');
+    }
+
+    return category;
+  }
 
   async create(data: CreateCategoryDto) {
     const categoryWithSameName = await this.categoriesRepository.findByName(data.name,);

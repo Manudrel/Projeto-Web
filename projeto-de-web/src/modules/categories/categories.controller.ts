@@ -1,8 +1,9 @@
-import { BadRequestException, Body, Controller, Delete, HttpCode, Param, ParseIntPipe, Patch, Post, } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query, } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags, } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { ListCategoriesDto } from './dto/list-categories.dto.js';
 
 const idPipe = new ParseIntPipe({
   exceptionFactory: () => new BadRequestException('O id deve ser um número'),
@@ -12,6 +13,23 @@ const idPipe = new ParseIntPipe({
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) { }
+
+  @Get()
+  @ApiOperation({ summary: 'Listar categorias' })
+  @ApiOkResponse({ description: 'Lista de categorias paginada' })
+  @ApiBadRequestResponse({ description: 'Filtros inválidos' })
+  findAll(@Query() filters: ListCategoriesDto) {
+    return this.categoriesService.findAll(filters);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Buscar categoria por id' })
+  @ApiOkResponse({ description: 'Categoria encontrada com sucesso' })
+  @ApiNotFoundResponse({ description: 'Categoria não encontrada' })
+  @ApiBadRequestResponse({ description: 'Id inválido' })
+  findById(@Param('id', idPipe) id: number) {
+    return this.categoriesService.findById(id);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Criar categoria' })

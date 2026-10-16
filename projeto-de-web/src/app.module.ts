@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
@@ -9,6 +10,7 @@ import { CourseModulesModule } from './modules/course-modules/course-modules.mod
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     CoursesModule,
     DatabaseModule,
     AuthModule,
