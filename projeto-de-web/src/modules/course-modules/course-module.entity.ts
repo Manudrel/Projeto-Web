@@ -7,7 +7,7 @@ export interface CourseModule {
   id: number;
   courseId: number;
   title: string;
-  content: string;
+  description: string;
   order: number;
   status: ModuleStatus;
   createdAt: Date;
