@@ -64,6 +64,14 @@ export class CoursesRepository {
       .first();
   }
 
+  findUserWithRole(id: number) {
+    return this.db('users')
+      .join('profiles', 'profiles.id', 'users.profile_id')
+      .where('users.id', id)
+      .whereNull('users.deleted_at')
+      .first('users.id', 'users.status', 'profiles.role');
+  }
+
   findByTitleAndCategory(
     title: string,
     categoryId: number,
