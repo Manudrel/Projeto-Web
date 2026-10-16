@@ -5,7 +5,7 @@ import { CoursesModule } from './modules/courses/courses.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
-import { CourseModulesModule } from './course-modules/course-modules.module.js';
+import { CourseModulesModule } from './modules/course-modules/course-modules.module.js';
 
 @Module({
   imports: [
