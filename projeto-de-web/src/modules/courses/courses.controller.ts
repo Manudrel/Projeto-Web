@@ -95,9 +95,12 @@ export class CoursesController {
   @ApiOperation({ summary: 'Criar curso' })
   @ApiCreatedResponse({ description: 'Curso criado' })
   @ApiBadRequestResponse({
-    description: 'Dados inválidos ou categoria inativa',
+    description:
+      'Dados inválidos, categoria inativa ou usuário sem perfil de instrutor ativo',
   })
-  @ApiNotFoundResponse({ description: 'Categoria não encontrada' })
+  @ApiNotFoundResponse({
+    description: 'Categoria ou instrutor não encontrados',
+  })
   @ApiConflictResponse({
     description: 'Já existe um curso com esse título nessa categoria',
   })
@@ -109,9 +112,12 @@ export class CoursesController {
   @ApiOperation({ summary: 'Atualizar curso' })
   @ApiOkResponse({ description: 'Curso atualizado' })
   @ApiBadRequestResponse({
-    description: 'Dados inválidos ou categoria inativa',
+    description:
+      'Dados inválidos, categoria inativa ou usuário sem perfil de instrutor ativo',
   })
-  @ApiNotFoundResponse({ description: 'Curso ou categoria não encontrados' })
+  @ApiNotFoundResponse({
+    description: 'Curso, categoria ou instrutor não encontrados',
+  })
   @ApiConflictResponse({
     description: 'Já existe um curso com esse título nessa categoria',
   })

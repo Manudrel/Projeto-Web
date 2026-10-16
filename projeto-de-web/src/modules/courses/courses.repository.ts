@@ -7,29 +7,69 @@ import { ListCourseStudentsDto } from './dto/list-course-students.dto.js';
 import { ListCoursesDto } from './dto/list-courses.dto.js';
 import { UpdateCourseDto } from './dto/update-course.dto.js';
 
+const courseColumns = [
+  'id',
+  'title',
+  'description',
+  'category_id as categoryId',
+  'instructor_id as instructorId',
+  'level',
+  'is_published as isPublished',
+  'created_at as createdAt',
+  'updated_at as updatedAt',
+  'deleted_at as deletedAt',
+];
+
+const moduleColumns = [
+  'id',
+  'course_id as courseId',
+  'title',
+  'description',
+  'order',
+  'status',
+  'created_at as createdAt',
+  'updated_at as updatedAt',
+  'deleted_at as deletedAt',
+];
+
 @Injectable()
 export class CoursesRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
   findAll(filters: ListCoursesDto) {
-    const query = this.db('courses').whereNull('deletedAt');
+    const query = this.db('courses').whereNull('deleted_at');
 
-    if (filters.categoryId) query.where('categoryId', filters.categoryId);
+    if (filters.categoryId) query.where('category_id', filters.categoryId);
     if (filters.level) query.where('level', filters.level);
 
     return query
-      .select('*')
+      .select(courseColumns)
       .orderBy('id')
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
 
   findById(id: number) {
-    return this.db('courses').where('id', id).whereNull('deletedAt').first();
+    return this.db('courses')
+      .where('id', id)
+      .whereNull('deleted_at')
+      .select(courseColumns)
+      .first();
   }
 
   findCategoryById(id: number) {
-    return this.db('categories').where('id', id).first();
+    return this.db('categories')
+      .where('id', id)
+      .whereNull('deleted_at')
+      .first();
+  }
+
+  findUserWithRole(id: number) {
+    return this.db('users')
+      .join('profiles', 'profiles.id', 'users.profile_id')
+      .where('users.id', id)
+      .whereNull('users.deleted_at')
+      .first('users.id', 'users.status', 'profiles.role');
   }
 
   findByTitleAndCategory(
@@ -39,8 +79,9 @@ export class CoursesRepository {
   ) {
     const query = this.db('courses')
       .whereRaw('LOWER(title) = LOWER(?)', [title])
-      .where('categoryId', categoryId)
-      .whereNull('deletedAt');
+      .where('category_id', categoryId)
+      .whereNull('deleted_at')
+      .select(courseColumns);
 
     if (ignoreCourseId) query.whereNot('id', ignoreCourseId);
 
@@ -52,11 +93,11 @@ export class CoursesRepository {
       .insert({
         title: data.title,
         description: data.description,
-        categoryId: data.categoryId,
-        instructorId: data.instructorId,
+        category_id: data.categoryId,
+        instructor_id: data.instructorId,
         level: data.level,
       })
-      .returning('*');
+      .returning(courseColumns);
 
     return course;
   }
@@ -67,44 +108,44 @@ export class CoursesRepository {
       .update({
         title: data.title,
         description: data.description,
-        categoryId: data.categoryId,
-        instructorId: data.instructorId,
+        category_id: data.categoryId,
+        instructor_id: data.instructorId,
         level: data.level,
-        updatedAt: this.db.fn.now(),
+        updated_at: this.db.fn.now(),
       })
-      .returning('*');
+      .returning(courseColumns);
 
     return course;
   }
 
   findActiveEnrollmentByCourse(courseId: number) {
     return this.db('enrollments')
-      .where('courseId', courseId)
+      .where('course_id', courseId)
       .where('status', 'ACTIVE')
-      .whereNull('deletedAt')
+      .whereNull('deleted_at')
       .first();
   }
 
   async delete(id: number) {
     await this.db('courses')
       .where('id', id)
-      .update({ deletedAt: this.db.fn.now() });
+      .update({ deleted_at: this.db.fn.now() });
   }
 
   findLessonByCourse(courseId: number) {
     return this.db('lessons')
-      .join('modules', 'modules.id', 'lessons.moduleId')
-      .where('modules.courseId', courseId)
-      .whereNull('modules.deletedAt')
-      .whereNull('lessons.deletedAt')
+      .join('modules', 'modules.id', 'lessons.module_id')
+      .where('modules.course_id', courseId)
+      .whereNull('modules.deleted_at')
+      .whereNull('lessons.deleted_at')
       .first('lessons.id');
   }
 
   async publish(id: number) {
     const [course] = await this.db('courses')
       .where('id', id)
-      .update({ isPublished: true, updatedAt: this.db.fn.now() })
-      .returning('*');
+      .update({ is_published: true, updated_at: this.db.fn.now() })
+      .returning(courseColumns);
 
     return course;
   }
@@ -112,22 +153,22 @@ export class CoursesRepository {
   async unpublish(id: number) {
     const [course] = await this.db('courses')
       .where('id', id)
-      .update({ isPublished: false, updatedAt: this.db.fn.now() })
-      .returning('*');
+      .update({ is_published: false, updated_at: this.db.fn.now() })
+      .returning(courseColumns);
 
     return course;
   }
 
   findModulesByCourse(courseId: number, filters: ListCourseModulesDto) {
     const query = this.db('modules')
-      .where('courseId', courseId)
-      .whereNull('deletedAt');
+      .where('course_id', courseId)
+      .whereNull('deleted_at');
 
     if (filters.status) query.where('status', filters.status);
     if (filters.order) query.where('order', filters.order);
 
     return query
-      .select('*')
+      .select(moduleColumns)
       .orderBy('order')
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
@@ -135,10 +176,10 @@ export class CoursesRepository {
 
   findStudentsByCourse(courseId: number, filters: ListCourseStudentsDto) {
     const query = this.db('enrollments')
-      .join('users', 'users.id', 'enrollments.userId')
-      .where('enrollments.courseId', courseId)
-      .whereNull('enrollments.deletedAt')
-      .whereNull('users.deletedAt');
+      .join('users', 'users.id', 'enrollments.user_id')
+      .where('enrollments.course_id', courseId)
+      .whereNull('enrollments.deleted_at')
+      .whereNull('users.deleted_at');
 
     if (filters.status) query.where('enrollments.status', filters.status);
     if (filters.progress !== undefined) {
@@ -153,7 +194,7 @@ export class CoursesRepository {
         'enrollments.id as enrollmentId',
         'enrollments.status',
         'enrollments.progress',
-        'enrollments.createdAt as enrolledAt',
+        'enrollments.created_at as enrolledAt',
       )
       .orderBy('users.name')
       .limit(filters.limit)
@@ -162,13 +203,13 @@ export class CoursesRepository {
 
   findProgressByCourse(courseId: number, filters: ListCourseProgressDto) {
     const query = this.db('progress')
-      .join('enrollments', 'enrollments.id', 'progress.enrollmentId')
-      .join('users', 'users.id', 'enrollments.userId')
-      .join('lessons', 'lessons.id', 'progress.lessonId')
-      .where('enrollments.courseId', courseId)
-      .whereNull('enrollments.deletedAt')
-      .whereNull('users.deletedAt')
-      .whereNull('lessons.deletedAt');
+      .join('enrollments', 'enrollments.id', 'progress.enrollment_id')
+      .join('users', 'users.id', 'enrollments.user_id')
+      .join('lessons', 'lessons.id', 'progress.lesson_id')
+      .where('enrollments.course_id', courseId)
+      .whereNull('enrollments.deleted_at')
+      .whereNull('users.deleted_at')
+      .whereNull('lessons.deleted_at');
 
     if (filters.status) query.where('enrollments.status', filters.status);
     if (filters.completed !== undefined) {
@@ -184,9 +225,9 @@ export class CoursesRepository {
         'lessons.id as lessonId',
         'lessons.title as lessonTitle',
         'progress.completed',
-        'progress.completedAt',
+        'progress.completed_at as completedAt',
       )
-      .orderBy(['users.name', 'lessons.order'])
+      .orderBy(['users.name', 'lessons.id'])
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
