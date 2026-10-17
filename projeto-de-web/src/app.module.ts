@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CourseModulesModule } from './modules/course-modules/course-modules.module.js';
+import { ProgressModule } from './modules/progress/progress.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CourseModulesModule } from './modules/course-modules/course-modules.mod
     AuthModule,
     CategoriesModule,
     CourseModulesModule,
+    ProgressModule,
   ],
   controllers: [AppController],
   providers: [AppService],
