@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
-
+// DIEGO ESSA MIGRATION É ANTIGA, MAS ELA AINDA PODE SER NECESSáRIA, 
+// ENTÃO DEIXEI ELA DECREPTED AQUI PARA CASO EU PRECISE USAR NOVAMENTE
 export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('profiles', (table) => {
     table.increments('id').primary();
