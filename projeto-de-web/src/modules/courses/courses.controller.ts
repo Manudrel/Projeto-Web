@@ -20,6 +20,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
@@ -95,14 +96,16 @@ export class CoursesController {
   @ApiOperation({ summary: 'Criar curso' })
   @ApiCreatedResponse({ description: 'Curso criado' })
   @ApiBadRequestResponse({
-    description:
-      'Dados inválidos, categoria inativa ou usuário sem perfil de instrutor ativo',
+    description: 'Dados inválidos, categoria inativa ou instrutor inativo',
   })
   @ApiNotFoundResponse({
     description: 'Categoria ou instrutor não encontrados',
   })
   @ApiConflictResponse({
     description: 'Já existe um curso com esse título nessa categoria',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'O instrutor precisa ter perfil INSTRUCTOR ou ADMIN',
   })
   create(@Body() data: CreateCourseDto) {
     return this.coursesService.create(data);
@@ -112,14 +115,16 @@ export class CoursesController {
   @ApiOperation({ summary: 'Atualizar curso' })
   @ApiOkResponse({ description: 'Curso atualizado' })
   @ApiBadRequestResponse({
-    description:
-      'Dados inválidos, categoria inativa ou usuário sem perfil de instrutor ativo',
+    description: 'Dados inválidos, categoria inativa ou instrutor inativo',
   })
   @ApiNotFoundResponse({
     description: 'Curso, categoria ou instrutor não encontrados',
   })
   @ApiConflictResponse({
     description: 'Já existe um curso com esse título nessa categoria',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'O instrutor precisa ter perfil INSTRUCTOR ou ADMIN',
   })
   update(@Param('id', idPipe) id: number, @Body() data: UpdateCourseDto) {
     return this.coursesService.update(id, data);
@@ -128,10 +133,12 @@ export class CoursesController {
   @Patch(':id/publish')
   @ApiOperation({ summary: 'Publicar curso' })
   @ApiOkResponse({ description: 'Curso publicado' })
-  @ApiBadRequestResponse({
-    description: 'Curso já publicado ou sem módulo com aula',
-  })
+  @ApiBadRequestResponse({ description: 'O curso já está publicado' })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'Curso sem módulo ativo com aula ativa, ou categoria/instrutor inativos',
+  })
   publish(@Param('id', idPipe) id: number) {
     return this.coursesService.publish(id);
   }
@@ -139,9 +146,7 @@ export class CoursesController {
   @Patch(':id/unpublish')
   @ApiOperation({ summary: 'Despublicar curso' })
   @ApiOkResponse({ description: 'Curso despublicado' })
-  @ApiBadRequestResponse({
-    description: 'Curso não publicado ou com alunos matriculados',
-  })
+  @ApiBadRequestResponse({ description: 'O curso não está publicado' })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
   unpublish(@Param('id', idPipe) id: number) {
     return this.coursesService.unpublish(id);
@@ -151,7 +156,7 @@ export class CoursesController {
   @HttpCode(204)
   @ApiOperation({ summary: 'Excluir curso' })
   @ApiNoContentResponse({ description: 'Curso excluído' })
-  @ApiBadRequestResponse({ description: 'Curso com alunos matriculados' })
+  @ApiConflictResponse({ description: 'Curso com matrículas ativas' })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
   delete(@Param('id', idPipe) id: number) {
     return this.coursesService.delete(id);
