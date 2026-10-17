@@ -1,9 +1,21 @@
 import { existsSync } from 'node:fs';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import type { Knex } from 'knex';
 
 const envPath = `${process.cwd()}/.env`;
 if (existsSync(envPath)) process.loadEnvFile(envPath);
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+
+dotenv.config({
+  path: resolve(__dirname, '../../.env'),
+});
+
 
 const config: Knex.Config = {
   client: 'pg',

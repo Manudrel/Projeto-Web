@@ -39,7 +39,7 @@ export class LessonsService {
         'Não é possível criar aula em um módulo inativo',
       );
     }
-
+    // Regra de negócio -> Verifica se já existe uma aula com o mesmo título no mesmo módulo
     const lessonWithSameTitle =
       await this.lessonsRepository.findByTitleAndModule(
         data.title,

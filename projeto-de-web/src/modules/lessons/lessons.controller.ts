@@ -23,7 +23,6 @@ import {
 } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service.js';
 import { CreateLessonDto } from './dto/create-lesson.dto.js';
-import { ListLessonProgressDto } from './dto/list-lesson-progress.dto.js';
 import { ListLessonsDto } from './dto/list-lessons.dto.js';
 import { UpdateLessonDto } from './dto/update-lesson.dto.js';
 
@@ -92,4 +91,5 @@ export class LessonsController {
   delete(@Param('id', idPipe) id: number) {
     return this.lessonsService.delete(id);
   }
+
 }
