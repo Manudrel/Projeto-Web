@@ -9,6 +9,7 @@ import {
   Patch,
   HttpCode,
   Delete,
+  Post,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -51,6 +52,20 @@ export class CourseModulesController {
   @ApiNotFoundResponse({ description: 'Módulo não encontrado' })
   findById(@Param('id', idPipe) id: number) {
     return this.courseModulesService.findById(id);
+  }
+
+
+  @Post()
+  @ApiOperation({ summary: 'Criar módulo' })
+  @ApiOkResponse({ description: 'Módulo criado' })
+  @ApiBadRequestResponse({ description: 'Dados inválidos' })
+  @ApiNotFoundResponse({ description: 'Curso não encontrado' })
+  create(
+    @Query('courseId', new ParseIntPipe()) courseId: number,  
+    @Body() data: UpdateCourseModuleDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.courseModulesService.create(courseId,data, user);
   }
 
   @Patch(':id')

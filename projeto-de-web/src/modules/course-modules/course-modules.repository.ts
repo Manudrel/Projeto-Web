@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { ListModulesDto } from './dto/list-modules.dto.js';
 import { UpdateCourseModuleDto } from './dto/update-course-module.dto.js';
+import { CreateCourseModuleDto } from './dto/create-course-module.dto.js';
 
 const moduleColumns = [
   'id',
@@ -57,6 +58,23 @@ export class CourseModulesRepository {
 
     return Number(result?.total ?? 0);
   }
+
+  async create(courseId: number, data: CreateCourseModuleDto) {
+    const order = await this.countByCourse(courseId) + 1;
+
+    const [courseModule] = await this.db('modules')
+      .insert({
+        course_id: courseId,
+        title: data.title,
+        description: data.description,
+        order,
+        status: data.status,
+      })
+      .returning(moduleColumns);
+
+    return courseModule;
+  }
+
 
   async update(id: number, courseId: number, currentOrder: number, data: UpdateCourseModuleDto) {
     return this.db.transaction(async (trx) => {

@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { ListModulesDto } from './dto/list-modules.dto.js';
 import { UpdateCourseModuleDto } from './dto/update-course-module.dto.js';
 import { CourseModulesRepository } from './course-modules.repository.js';
+import { CreateCourseModuleDto } from './dto/create-course-module.dto.js';
 
 @Injectable()
 export class CourseModulesService {
@@ -28,6 +29,32 @@ export class CourseModulesService {
 
     return courseModule;
   }
+
+  async create(courseId: number, data: CreateCourseModuleDto, user: AuthenticatedUser) {
+    
+    const course = await this.courseModulesRepository.findCourseById(courseId);
+
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    if (user.profile.role !== 'ADMIN' && user.profile.role !== 'INSTRUCTOR') {
+      throw new ForbiddenException(
+        'Apenas administradores e instrutores podem criar módulos',
+      );
+    }
+
+    if (user.profile.role === 'INSTRUCTOR' && course.instructorId !== user.id) {
+      throw new ForbiddenException(
+        'Apenas o instrutor dono do curso ou um administrador pode criar módulos neste curso',
+      );
+    }
+
+    return this.courseModulesRepository.create(courseId, data);
+
+  }
+
+
 
   async update(id: number, data: UpdateCourseModuleDto, user: AuthenticatedUser) {
     const courseModule = await this.findById(id);
