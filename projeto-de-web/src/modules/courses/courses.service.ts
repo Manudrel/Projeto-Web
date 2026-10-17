@@ -57,6 +57,24 @@ export class CoursesService {
       );
     }
 
+    const instructor = await this.coursesRepository.findUserWithRole(
+      data.instructorId,
+    );
+
+    if (!instructor) {
+      throw new NotFoundException('Instrutor não encontrado');
+    }
+
+    if (instructor.role !== 'INSTRUCTOR' && instructor.role !== 'ADMIN') {
+      throw new BadRequestException(
+        'O usuário informado não tem perfil de instrutor',
+      );
+    }
+
+    if (instructor.status !== 'ACTIVE') {
+      throw new BadRequestException('O instrutor informado está inativo');
+    }
+
     return this.coursesRepository.create(data);
   }
 
@@ -100,6 +118,30 @@ export class CoursesService {
         throw new ConflictException(
           'Já existe um curso com esse título nessa categoria',
         );
+      }
+    }
+
+    const instructorChanged =
+      data.instructorId !== undefined &&
+      data.instructorId !== course.instructorId;
+
+    if (instructorChanged) {
+      const instructor = await this.coursesRepository.findUserWithRole(
+        data.instructorId!,
+      );
+
+      if (!instructor) {
+        throw new NotFoundException('Instrutor não encontrado');
+      }
+
+      if (instructor.role !== 'INSTRUCTOR' && instructor.role !== 'ADMIN') {
+        throw new BadRequestException(
+          'O usuário informado não tem perfil de instrutor',
+        );
+      }
+
+      if (instructor.status !== 'ACTIVE') {
+        throw new BadRequestException('O instrutor informado está inativo');
       }
     }
 
