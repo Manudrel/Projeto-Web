@@ -14,8 +14,17 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Plataforma de Cursos')
     .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'bearer',
+    )
     .build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));
+  SwaggerModule.setup(
+    'docs',
+    app,
+    SwaggerModule.createDocument(app, config),
+    { swaggerOptions: { persistAuthorization: true } },
+  );
 
   await app.listen(process.env.PORT ?? 3000);
 }

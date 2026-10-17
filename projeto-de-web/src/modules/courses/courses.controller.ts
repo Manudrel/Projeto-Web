@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -34,6 +35,7 @@ const idPipe = new ParseIntPipe({
 });
 
 @ApiTags('Cursos')
+@ApiBearerAuth()
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}

@@ -76,7 +76,7 @@ export class AuthService {
       data.email.trim().toLowerCase(),
     );
     const passwordMatches = account
-      ? await bcrypt.compare(account.passwordHash, data.password)
+      ? await bcrypt.compare(data.password, account.passwordHash)
       : false;
 
     if (!account || account.status !== 'ACTIVE' || !passwordMatches) {
