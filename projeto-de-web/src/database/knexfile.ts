@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Knex } from 'knex';
 
-const envPath = `${process.cwd()}/.env`;
+const envPath = fileURLToPath(new URL('../../.env', import.meta.url));
 if (existsSync(envPath)) process.loadEnvFile(envPath);
 
 const config: Knex.Config = {
