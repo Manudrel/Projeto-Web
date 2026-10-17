@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { CoursesRepository } from './courses.repository.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
@@ -66,8 +67,8 @@ export class CoursesService {
     }
 
     if (instructor.role !== 'INSTRUCTOR' && instructor.role !== 'ADMIN') {
-      throw new BadRequestException(
-        'O usuário informado não tem perfil de instrutor',
+      throw new UnprocessableEntityException(
+        'O instrutor do curso precisa ter perfil INSTRUCTOR ou ADMIN',
       );
     }
 
@@ -135,8 +136,8 @@ export class CoursesService {
       }
 
       if (instructor.role !== 'INSTRUCTOR' && instructor.role !== 'ADMIN') {
-        throw new BadRequestException(
-          'O usuário informado não tem perfil de instrutor',
+        throw new UnprocessableEntityException(
+          'O instrutor do curso precisa ter perfil INSTRUCTOR ou ADMIN',
         );
       }
 
@@ -159,8 +160,8 @@ export class CoursesService {
       await this.coursesRepository.findActiveEnrollmentByCourse(id);
 
     if (activeEnrollment) {
-      throw new BadRequestException(
-        'Não é possível excluir um curso com alunos matriculados',
+      throw new ConflictException(
+        'Não é possível excluir um curso com matrículas ativas',
       );
     }
 
@@ -178,11 +179,31 @@ export class CoursesService {
       throw new BadRequestException('O curso já está publicado');
     }
 
-    const lesson = await this.coursesRepository.findLessonByCourse(id);
+    const lesson = await this.coursesRepository.findActiveLessonByCourse(id);
 
     if (!lesson) {
-      throw new BadRequestException(
-        'O curso precisa ter pelo menos um módulo com aula para ser publicado',
+      throw new UnprocessableEntityException(
+        'O curso precisa de ao menos um módulo ativo com uma aula ativa',
+      );
+    }
+
+    const category = await this.coursesRepository.findCategoryById(
+      course.categoryId,
+    );
+
+    if (!category || category.status !== 'ACTIVE') {
+      throw new UnprocessableEntityException(
+        'A categoria do curso precisa estar ativa',
+      );
+    }
+
+    const instructor = await this.coursesRepository.findUserWithRole(
+      course.instructorId,
+    );
+
+    if (!instructor || instructor.status !== 'ACTIVE') {
+      throw new UnprocessableEntityException(
+        'O instrutor do curso precisa estar ativo',
       );
     }
 
@@ -198,15 +219,6 @@ export class CoursesService {
 
     if (!course.isPublished) {
       throw new BadRequestException('O curso não está publicado');
-    }
-
-    const activeEnrollment =
-      await this.coursesRepository.findActiveEnrollmentByCourse(id);
-
-    if (activeEnrollment) {
-      throw new BadRequestException(
-        'Não é possível despublicar um curso com alunos matriculados',
-      );
     }
 
     return this.coursesRepository.unpublish(id);

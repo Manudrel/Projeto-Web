@@ -127,15 +127,29 @@ export class CoursesRepository {
   }
 
   async delete(id: number) {
-    await this.db('courses')
-      .where('id', id)
-      .update({ deleted_at: this.db.fn.now() });
+    await this.db.transaction(async (trx) => {
+      const moduleIds = trx('modules').where('course_id', id).select('id');
+
+      await trx('lessons')
+        .whereIn('module_id', moduleIds)
+        .whereNull('deleted_at')
+        .update({ deleted_at: trx.fn.now() });
+
+      await trx('modules')
+        .where('course_id', id)
+        .whereNull('deleted_at')
+        .update({ deleted_at: trx.fn.now() });
+
+      await trx('courses').where('id', id).update({ deleted_at: trx.fn.now() });
+    });
   }
 
-  findLessonByCourse(courseId: number) {
+  findActiveLessonByCourse(courseId: number) {
     return this.db('lessons')
       .join('modules', 'modules.id', 'lessons.module_id')
       .where('modules.course_id', courseId)
+      .where('modules.status', 'ACTIVE')
+      .where('lessons.status', 'ACTIVE')
       .whereNull('modules.deleted_at')
       .whereNull('lessons.deleted_at')
       .first('lessons.id');
