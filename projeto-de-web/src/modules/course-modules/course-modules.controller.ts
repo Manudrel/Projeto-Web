@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -52,6 +54,15 @@ export class CourseModulesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Atualizar módulo' })
+  @ApiOkResponse({ description: 'Módulo atualizado com sucesso' })
+  @ApiBadRequestResponse({
+    description: 'Dados inválidos, id inválido ou ordem maior que o total de módulos',
+  })
+  @ApiNotFoundResponse({ description: 'Módulo não encontrado' })
+  @ApiForbiddenResponse({
+    description: 'Apenas o instrutor dono do curso ou administrador pode alterar este módulo',
+  })
   update(
     @Param('id', idPipe) id: number,
     @Body() data: UpdateCourseModuleDto,
@@ -62,6 +73,13 @@ export class CourseModulesController {
 
   @Delete(':id')
   @HttpCode(204)
+  @ApiOperation({ summary: 'Excluir módulo' })
+  @ApiNoContentResponse({ description: 'Módulo excluído com sucesso' })
+  @ApiBadRequestResponse({ description: 'O id deve ser um número' })
+  @ApiNotFoundResponse({ description: 'Módulo não encontrado' })
+  @ApiForbiddenResponse({
+    description: 'Apenas o instrutor dono do curso ou administrador pode excluir este módulo',
+  })
   delete(
     @Param('id', idPipe) id: number,
     @CurrentUser() user: AuthenticatedUser,
