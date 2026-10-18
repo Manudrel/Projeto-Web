@@ -18,7 +18,15 @@ export class ProgressService {
   findAll(filters: ListProgressDto, user: AuthenticatedUser) {
     const role = user.profile.role;
 
-    if (role === 'STUDENT') filters.userId = user.id;
+    // RN-10 -> Isolamento do aluno: só enxerga o próprio progresso
+    if (role === 'STUDENT') {
+      if (filters.userId && filters.userId !== user.id) {
+        throw new ForbiddenException(
+          'Você não tem permissão para consultar o progresso de outro aluno',
+        );
+      }
+      filters.userId = user.id;
+    }
 
     return this.progressRepository.findAll(filters, role === 'INSTRUCTOR' ? user.id : undefined);
   }
@@ -88,6 +96,11 @@ export class ProgressService {
 
     if (progress.enrollmentStatus !== 'ACTIVE') {
       throw new UnprocessableEntityException('A matrícula precisa estar ativa para alterar o progresso');
+    }
+
+    // RN-04 -> Não dá para concluir a mesma aula duas vezes
+    if (data.completed && progress.completed) {
+      throw new ConflictException('Esta aula já foi concluída nesta matrícula');
     }
 
     await this.progressRepository.update(id, progress.enrollmentId, progress.courseId, data.completed);

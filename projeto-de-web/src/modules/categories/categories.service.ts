@@ -69,11 +69,12 @@ export class CategoriesService {
     await this.categoriesRepository.delete(id);
   }
 
+  // RN-15 -> Categoria em uso: não inativa nem exclui categoria com cursos publicados
   private async ensureWithoutPublishedCourses(id: number, message: string) {
     const publishedCourse = await this.categoriesRepository.findPublishedCourseByCategory(id);
 
     if (publishedCourse) {
-      throw new BadRequestException(message);
+      throw new ConflictException(message);
     }
   }
 }

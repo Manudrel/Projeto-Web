@@ -50,10 +50,13 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Atualizar categoria' })
   @ApiOkResponse({ description: 'Categoria atualizada com sucesso' })
   @ApiBadRequestResponse({
-    description: 'Dados inválidos, id inválido ou categoria com cursos publicados',
+    description: 'Dados inválidos ou id inválido',
   })
   @ApiNotFoundResponse({ description: 'Categoria não encontrada' })
-  @ApiConflictResponse({ description: 'Já existe uma categoria com esse nome' })
+  @ApiConflictResponse({
+    description:
+      'Já existe uma categoria com esse nome ou categoria com cursos publicados',
+  })
   update(@Param('id', idPipe) id: number, @Body() data: UpdateCategoryDto) {
     return this.categoriesService.update(id, data);
   }
@@ -64,9 +67,12 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Excluir categoria' })
   @ApiNoContentResponse({ description: 'Categoria excluída com sucesso' })
   @ApiBadRequestResponse({
-    description: 'Id inválido ou categoria com cursos publicados',
+    description: 'O id deve ser um número',
   })
   @ApiNotFoundResponse({ description: 'Categoria não encontrada' })
+  @ApiConflictResponse({
+    description: 'Não é possível excluir uma categoria com cursos publicados',
+  })
   delete(@Param('id', idPipe) id: number) {
     return this.categoriesService.delete(id);
   }

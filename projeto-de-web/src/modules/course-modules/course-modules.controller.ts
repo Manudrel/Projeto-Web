@@ -73,11 +73,11 @@ export class CourseModulesController {
   })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
   create(
-    @Query('courseId', new ParseIntPipe()) courseId: number,  
+    @Query('courseId', new ParseIntPipe()) courseId: number,
     @Body() data: CreateCourseModuleDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.courseModulesService.create(courseId,data, user);
+    return this.courseModulesService.create(courseId, data, user);
   }
 
   @Patch(':id')

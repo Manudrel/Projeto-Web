@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException, } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AssessmentType } from './assessment.entity.js';
 import { AssessmentsRepository } from './assessments.repository.js';
@@ -110,8 +103,11 @@ export class AssessmentsService {
       throw new ForbiddenException('Você não tem permissão para realizar tentativa nesta matrícula');
     }
 
+    // RN-06 -> Tentativa exige matrícula ativa no curso da avaliação
     if (enrollment.courseId !== assessment.courseId) {
-      throw new BadRequestException('A matrícula não pertence ao curso desta avaliação');
+      throw new UnprocessableEntityException(
+        'A matrícula informada não pertence ao curso desta avaliação',
+      );
     }
 
     if (enrollment.status !== 'ACTIVE') {
@@ -144,9 +140,33 @@ export class AssessmentsService {
   }
 
   async findAttempts(assessmentId: number, user: AuthenticatedUser) {
-    await this.findById(assessmentId);
+    const assessment = await this.findById(assessmentId);
+    const course = await this.assessmentsRepository.findCourseById(assessment.courseId);
 
+    if (!course) {
+      throw new NotFoundException('Curso não encontrado');
+    }
+
+    // RN-09 -> Apenas o instrutor dono do curso consulta tentativas
+    if (user.profile.role === 'INSTRUCTOR' && course.instructorId !== user.id) {
+      throw new ForbiddenException(
+        'Apenas o instrutor dono do curso ou administrador pode consultar as tentativas',
+      );
+    }
+
+    // RN-10 -> Aluno consulta apenas tentativas de cursos em que está matriculado
     if (user.profile.role === 'STUDENT') {
+      const enrollment = await this.assessmentsRepository.findEnrollmentByUserAndCourse(
+        user.id,
+        assessment.courseId,
+      );
+
+      if (!enrollment) {
+        throw new ForbiddenException(
+          'Você não tem acesso às tentativas de avaliação deste curso',
+        );
+      }
+
       return this.assessmentsRepository.findAttemptsByUser(assessmentId, user.id);
     }
 

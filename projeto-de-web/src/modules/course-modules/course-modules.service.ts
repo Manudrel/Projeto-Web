@@ -48,7 +48,7 @@ export class CourseModulesService {
   }
 
   async create(courseId: number, data: CreateCourseModuleDto, user: AuthenticatedUser) {
-    
+
     const course = await this.courseModulesRepository.findCourseById(courseId);
 
     if (!course) {
@@ -66,8 +66,8 @@ export class CourseModulesService {
         'Apenas o instrutor dono do curso ou um administrador pode criar módulos neste curso',
       );
     }
-//RN 8 -> Ordem do módulo FEITO
-// oque isso faz é que quando o instrutor cria um modulo ele vai ser criado na ultima posição do curso
+    //RN 8 -> Ordem do módulo FEITO
+    // oque isso faz é que quando o instrutor cria um modulo ele vai ser criado na ultima posição do curso
     const total = await this.courseModulesRepository.countByCourse(courseId);
     const order = data.order ?? total + 1;
 

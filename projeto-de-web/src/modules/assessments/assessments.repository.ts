@@ -100,6 +100,14 @@ export class AssessmentsRepository {
       .first();
   }
 
+  findEnrollmentByUserAndCourse(userId: number, courseId: number) {
+    return this.db('enrollments')
+      .where({ user_id: userId, course_id: courseId })
+      .whereIn('status', ['ACTIVE', 'COMPLETED'])
+      .whereNull('deleted_at')
+      .first();
+  }
+
   findAttempts(assessmentId: number, enrollmentId?: number) {
     const query = this.db('assessment_attempts')
       .where('assessment_id', assessmentId);
