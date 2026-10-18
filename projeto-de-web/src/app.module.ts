@@ -10,6 +10,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CourseModulesModule } from './modules/course-modules/course-modules.module.js';
 import { ProfilesModule } from './modules/profiles/profiles.module.js';
 import { ProgressModule } from './modules/progress/progress.module.js';
+import { PermissionsModule } from './modules/permissions/permissions.module.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
 import { AssessmentsModule } from './modules/assessments/assessments.module.js';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module.js';
@@ -28,6 +29,7 @@ import { EnrollmentModule } from './modules/enrollment/enrollment.module.js';
     ProfilesModule,
     CoursesModule,
     UsersModule,
+    PermissionsModule,
     AssessmentsModule,
   ],
   controllers: [AppController],
