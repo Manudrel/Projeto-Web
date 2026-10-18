@@ -10,6 +10,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CourseModulesModule } from './modules/course-modules/course-modules.module.js';
 import { ProgressModule } from './modules/progress/progress.module.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
+import { AssessmentsModule } from './modules/assessments/assessments.module.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CoursesModule } from './modules/courses/courses.module.js';
     ProgressModule,
     CoursesModule,
     UsersModule,
+    AssessmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
