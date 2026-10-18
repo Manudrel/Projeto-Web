@@ -9,6 +9,7 @@ import { UsersModule } from './modules/users/users.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CourseModulesModule } from './modules/course-modules/course-modules.module.js';
 import { ProgressModule } from './modules/progress/progress.module.js';
+import { PermissionsModule } from './modules/permissions/permissions.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ProgressModule } from './modules/progress/progress.module.js';
     CourseModulesModule,
     ProgressModule,
     UsersModule,
+    PermissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
