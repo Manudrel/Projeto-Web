@@ -1,19 +1,20 @@
 import type { Knex } from 'knex';
 
-
-
-
 const lessons = [
   {
     id: 1,
-    module_id: 1,
+    courseTitle: 'NestJS do Zero',
+    moduleTitle: 'Introdução ao NestJS',
+    order: 1,
     title: 'Bem-vindo ao curso',
     content: 'https://example.com/videos/bem-vindo.mp4',
     type: 'VIDEO',
   },
   {
     id: 2,
-    module_id: 1,
+    courseTitle: 'NestJS do Zero',
+    moduleTitle: 'Introdução ao NestJS',
+    order: 2,
     title: 'Como o NestJS organiza uma aplicação',
     content:
       '# Módulos, controllers e providers\n\nUm módulo agrupa controllers e providers relacionados...',
@@ -21,7 +22,9 @@ const lessons = [
   },
   {
     id: 3,
-    module_id: 1,
+    courseTitle: 'NestJS do Zero',
+    moduleTitle: 'Introdução ao NestJS',
+    order: 3,
     title: 'Quiz: fundamentos do NestJS',
     content: JSON.stringify({
       questions: [
@@ -36,29 +39,28 @@ const lessons = [
   },
   {
     id: 4,
-    module_id: 1,
+    courseTitle: 'NestJS do Zero',
+    moduleTitle: 'Banco de Dados',
+    order: 1,
     title: 'Criando tabelas com migrations',
     content: 'https://example.com/videos/migrations.mp4',
     type: 'VIDEO',
   },
+ 
   {
     id: 5,
-    module_id: 1,
-    title: 'Índices e performance no PostgreSQL',
-    content:
-      '# Índices\n\nUm índice acelera leituras, mas tem custo em escrita e espaço...',
-    type: 'ARTICLE',
-  },
-  {
-    id: 6,
-    module_id: 1,
+    courseTitle: 'Docker na Prática',
+    moduleTitle: 'Fundamentos de Containers',
+    order: 1,
     title: 'Containers e imagens',
     content: 'https://example.com/videos/docker-intro.mp4',
     type: 'VIDEO',
   },
   {
-    id: 7,
-    module_id: 1,
+    id: 6,
+    courseTitle: 'Docker na Prática',
+    moduleTitle: 'Fundamentos de Containers',
+    order: 2,
     title: 'Quiz: Docker básico',
     content: JSON.stringify({
       questions: [
@@ -75,10 +77,29 @@ const lessons = [
 
 export async function seed(knex: Knex): Promise<void> {
   await knex.transaction(async (trx) => {
-    await trx('lessons')
-      .insert(lessons)
-      .onConflict('id')
-      .merge(['module_id', 'title', 'content', 'type']);
+    for (const lesson of lessons) {
+      const module = await trx('modules')
+        .join('courses', 'courses.id', 'modules.course_id')
+        .where('courses.title', lesson.courseTitle)
+        .where('modules.title', lesson.moduleTitle)
+        .whereNull('courses.deleted_at')
+        .whereNull('modules.deleted_at')
+        .first('modules.id');
+
+      if (!module) continue;
+
+      await trx('lessons')
+        .insert({
+          id: lesson.id,
+          module_id: module.id,
+          order: lesson.order,
+          title: lesson.title,
+          content: lesson.content,
+          type: lesson.type,
+        })
+        .onConflict('id')
+        .merge(['module_id', 'order', 'title', 'content', 'type']);
+    }
 
     await trx.raw(
       `SELECT setval(pg_get_serial_sequence('lessons', 'id'), (SELECT COALESCE(MAX(id), 1) FROM lessons))`,
