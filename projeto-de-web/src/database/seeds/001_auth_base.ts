@@ -52,6 +52,8 @@ const permissionsByRole: Record<string, string[]> = {
   STUDENT: [
     'categories:read',
     'courses:read',
+    'modules:read',
+    'lessons:read',
     'enrollments:create',
     'enrollments:read',
     'enrollments:cancel',

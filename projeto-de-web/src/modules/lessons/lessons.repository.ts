@@ -9,15 +9,38 @@ import { ListLessonProgressDto } from './dto/list-lesson-progress.dto.js';
 export class LessonsRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
-  findAll(filters: ListLessonsDto) {
-    const query = this.db('lessons').whereNull('deleted_at');
+  findAll(
+    filters: ListLessonsDto,
+    visibility: {
+      role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
+      userId: number;
+    },
+  ) {
+    const query = this.db('lessons')
+      .join('modules', 'modules.id', 'lessons.module_id')
+      .join('courses', 'courses.id', 'modules.course_id')
+      .whereNull('lessons.deleted_at')
+      .whereNull('modules.deleted_at')
+      .whereNull('courses.deleted_at');
 
-    if (filters.moduleId) query.where('module_id', filters.moduleId);
-    if (filters.type) query.where('type', filters.type);
+    if (visibility.role === 'INSTRUCTOR') {
+      query.where('courses.instructor_id', visibility.userId);
+    }
+
+    if (visibility.role === 'STUDENT') {
+      query
+        .join('enrollments', 'enrollments.course_id', 'courses.id')
+        .where('enrollments.user_id', visibility.userId)
+        .whereIn('enrollments.status', ['ACTIVE', 'COMPLETED'])
+        .whereNull('enrollments.deleted_at');
+    }
+
+    if (filters.moduleId) query.where('lessons.module_id', filters.moduleId);
+    if (filters.type) query.where('lessons.type', filters.type);
 
     return query
-      .select('*')
-      .orderBy('id')
+      .distinct('lessons.*')
+      .orderBy('lessons.id')
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
@@ -56,6 +79,44 @@ export class LessonsRepository {
 
   findById(id: number) {
     return this.db('lessons').where('id', id).whereNull('deleted_at').first();
+  }
+
+  findLessonAccessById(id: number) {
+    return this.db('lessons')
+      .join('modules', 'modules.id', 'lessons.module_id')
+      .join('courses', 'courses.id', 'modules.course_id')
+      .where('lessons.id', id)
+      .whereNull('lessons.deleted_at')
+      .whereNull('modules.deleted_at')
+      .whereNull('courses.deleted_at')
+      .select(
+        'courses.instructor_id as instructorId',
+        'courses.is_published as isPublished',
+        'courses.id as courseId',
+      )
+      .first();
+  }
+
+  findModuleAccessById(id: number) {
+    return this.db('modules')
+      .join('courses', 'courses.id', 'modules.course_id')
+      .where('modules.id', id)
+      .whereNull('modules.deleted_at')
+      .whereNull('courses.deleted_at')
+      .select(
+        'courses.instructor_id as instructorId',
+        'courses.id as courseId',
+      )
+      .first();
+  }
+
+  findEnrollmentForCourse(courseId: number, userId: number) {
+    return this.db('enrollments')
+      .where('course_id', courseId)
+      .where('user_id', userId)
+      .whereIn('status', ['ACTIVE', 'COMPLETED'])
+      .whereNull('deleted_at')
+      .first('id');
   }
 
   findModuleById(id: number) {

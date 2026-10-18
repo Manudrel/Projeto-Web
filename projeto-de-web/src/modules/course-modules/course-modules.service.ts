@@ -16,17 +16,34 @@ export class CourseModulesService {
     private readonly courseModulesRepository: CourseModulesRepository,
   ) { }
 
-  findAll(filters: ListModulesDto) {
-    return this.courseModulesRepository.findAll(filters);
+  findAll(filters: ListModulesDto, user: AuthenticatedUser) {
+    const role = user.profile.role;
+    return this.courseModulesRepository.findAll(filters, {
+      instructorId: role === 'INSTRUCTOR' ? user.id : undefined,
+      publishedOnly: role === 'STUDENT',
+      activeOnly: role === 'STUDENT',
+    });
   }
 
-  async findById(id: number) {
+  async findById(id: number, user: AuthenticatedUser) {
     const courseModule = await this.courseModulesRepository.findById(id);
 
     if (!courseModule) {
       throw new NotFoundException('Módulo não encontrado');
     }
 
+    const course = await this.courseModulesRepository.findCourseById(
+      courseModule.courseId,
+    );
+
+    if (!course) {
+      throw new NotFoundException('Curso nao encontrado.');
+    }
+
+    this.ensureCanRead(course, user);
+    if (user.profile.role === 'STUDENT' && courseModule.status !== 'ACTIVE') {
+      throw new ForbiddenException('Aluno nao pode acessar modulo inativo.');
+    }
     return courseModule;
   }
 
@@ -57,7 +74,7 @@ export class CourseModulesService {
 
 
   async update(id: number, data: UpdateCourseModuleDto, user: AuthenticatedUser) {
-    const courseModule = await this.findById(id);
+    const courseModule = await this.findById(id, user);
 
     await this.ensureCanManage(courseModule.courseId, user);
 
@@ -78,7 +95,7 @@ export class CourseModulesService {
   }
 
   async delete(id: number, user: AuthenticatedUser) {
-    const courseModule = await this.findById(id);
+    const courseModule = await this.findById(id, user);
 
     await this.ensureCanManage(courseModule.courseId, user);
 
@@ -98,6 +115,21 @@ export class CourseModulesService {
       throw new ForbiddenException(
         'Apenas o instrutor dono do curso ou um administrador pode alterar este módulo',
       );
+    }
+  }
+
+  private ensureCanRead(
+    course: { instructorId: number; isPublished: boolean },
+    user: AuthenticatedUser,
+  ) {
+    const role = user.profile.role;
+    const allowed =
+      role === 'ADMIN' ||
+      (role === 'INSTRUCTOR' && course.instructorId === user.id) ||
+      (role === 'STUDENT' && course.isPublished);
+
+    if (!allowed) {
+      throw new ForbiddenException('Voce nao tem acesso a este modulo.');
     }
   }
 }

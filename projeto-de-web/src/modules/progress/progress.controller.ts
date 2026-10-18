@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -21,6 +22,7 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { CreateProgressDto } from './dto/create-progress.dto.js';
 import { ListProgressDto } from './dto/list-progress.dto.js';
@@ -32,11 +34,13 @@ const idPipe = new ParseIntPipe({
 });
 
 @ApiTags('Progresso')
+@ApiBearerAuth()
 @Controller('progress')
 export class ProgressController {
   constructor(private readonly progressService: ProgressService) { }
 
   @Get()
+  @RequirePermissions('progress:read')
   @ApiOperation({ summary: 'Listar progresso' })
   @ApiOkResponse({ description: 'Lista de progresso retornada com sucesso' })
   @ApiBadRequestResponse({ description: 'Filtros inválidos' })
@@ -45,6 +49,7 @@ export class ProgressController {
   }
 
   @Get(':id')
+  @RequirePermissions('progress:read')
   @ApiOperation({ summary: 'Buscar progresso por id' })
   @ApiOkResponse({ description: 'Progresso encontrado com sucesso' })
   @ApiBadRequestResponse({ description: 'O id deve ser um número' })
@@ -55,6 +60,7 @@ export class ProgressController {
   }
 
   @Post()
+  @RequirePermissions('progress:create')
   @ApiOperation({ summary: 'Registrar conclusão de aula' })
   @ApiCreatedResponse({ description: 'Progresso registrado com sucesso' })
   @ApiBadRequestResponse({ description: 'Dados inválidos' })
@@ -71,6 +77,7 @@ export class ProgressController {
   }
 
   @Patch(':id')
+  @RequirePermissions('progress:update')
   @ApiOperation({ summary: 'Atualizar status de conclusão de aula' })
   @ApiOkResponse({ description: 'Progresso atualizado com sucesso' })
   @ApiBadRequestResponse({ description: 'Dados inválidos ou id inválido' })

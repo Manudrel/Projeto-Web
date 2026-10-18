@@ -7,10 +7,11 @@ export enum TypeLesson {
 
 export interface Lesson {
   id: number;
-  moduleId: string;
+  moduleId: number;
   title: string;
   content: string;
   type: TypeLesson;
+  status: 'ACTIVE' | 'INACTIVE';
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;

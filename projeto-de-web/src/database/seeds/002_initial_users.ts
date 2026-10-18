@@ -60,8 +60,29 @@ export async function seed(knex: Knex): Promise<void> {
     })),
   ];
 
+  const [adminUser, ...demoUsers] = users;
+  const existingSeedAdmin = await knex('users')
+    .where({ name: 'Platform Admin', profile_id: adminProfile.id })
+    .orderBy('id')
+    .first('id');
+
+  if (existingSeedAdmin) {
+    await knex('users')
+      .where('id', existingSeedAdmin.id)
+      .update({
+        ...adminUser,
+        deleted_at: null,
+        updated_at: knex.fn.now(),
+      });
+  } else {
+    await knex('users')
+      .insert(adminUser)
+      .onConflict('email')
+      .merge(['name', 'password_hash', 'status', 'profile_id', 'deleted_at']);
+  }
+
   await knex('users')
-    .insert(users)
+    .insert(demoUsers)
     .onConflict('email')
-    .ignore();
+    .merge(['name', 'password_hash', 'status', 'profile_id', 'deleted_at']);
 }

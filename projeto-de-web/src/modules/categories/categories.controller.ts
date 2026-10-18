@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query, } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags, } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags, } from '@nestjs/swagger';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator.js';
 import { CategoriesService } from './categories.service.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
@@ -10,11 +11,13 @@ const idPipe = new ParseIntPipe({
 });
 
 @ApiTags('Categorias')
+@ApiBearerAuth()
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) { }
 
   @Get()
+  @RequirePermissions('categories:read')
   @ApiOperation({ summary: 'Listar categorias' })
   @ApiOkResponse({ description: 'Lista de categorias paginada' })
   @ApiBadRequestResponse({ description: 'Filtros inválidos' })
@@ -23,6 +26,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @RequirePermissions('categories:read')
   @ApiOperation({ summary: 'Buscar categoria por id' })
   @ApiOkResponse({ description: 'Categoria encontrada com sucesso' })
   @ApiNotFoundResponse({ description: 'Categoria não encontrada' })
@@ -32,6 +36,7 @@ export class CategoriesController {
   }
 
   @Post()
+  @RequirePermissions('categories:create')
   @ApiOperation({ summary: 'Criar categoria' })
   @ApiCreatedResponse({ description: 'Categoria criada com sucesso' })
   @ApiBadRequestResponse({ description: 'Dados inválidos' })
@@ -41,6 +46,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
+  @RequirePermissions('categories:update')
   @ApiOperation({ summary: 'Atualizar categoria' })
   @ApiOkResponse({ description: 'Categoria atualizada com sucesso' })
   @ApiBadRequestResponse({
@@ -53,6 +59,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('categories:delete')
   @HttpCode(204)
   @ApiOperation({ summary: 'Excluir categoria' })
   @ApiNoContentResponse({ description: 'Categoria excluída com sucesso' })

@@ -20,11 +20,37 @@ const moduleColumns = [
 export class CourseModulesRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) { }
 
-  findAll(filters: ListModulesDto) {
+  findAll(
+    filters: ListModulesDto,
+    visibility: {
+      instructorId?: number;
+      publishedOnly?: boolean;
+      activeOnly?: boolean;
+    } = {},
+  ) {
     const query = this.db('modules').whereNull('deleted_at');
 
     if (filters.courseId) query.where('course_id', filters.courseId);
     if (filters.status) query.where('status', filters.status);
+    if (visibility.instructorId !== undefined) {
+      query.whereIn(
+        'course_id',
+        this.db('courses')
+          .select('id')
+          .where('instructor_id', visibility.instructorId)
+          .whereNull('deleted_at'),
+      );
+    }
+    if (visibility.publishedOnly) {
+      query.whereIn(
+        'course_id',
+        this.db('courses')
+          .select('id')
+          .where('is_published', true)
+          .whereNull('deleted_at'),
+      );
+    }
+    if (visibility.activeOnly) query.where('status', 'ACTIVE');
 
     return query
       .select(moduleColumns)
@@ -45,7 +71,11 @@ export class CourseModulesRepository {
     return this.db('courses')
       .where('id', courseId)
       .whereNull('deleted_at')
-      .select('id', 'instructor_id as instructorId')
+      .select(
+        'id',
+        'instructor_id as instructorId',
+        'is_published as isPublished',
+      )
       .first();
   }
 

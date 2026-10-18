@@ -36,11 +36,18 @@ const moduleColumns = [
 export class CoursesRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
-  findAll(filters: ListCoursesDto) {
+  findAll(
+    filters: ListCoursesDto,
+    visibility: { instructorId?: number; publishedOnly?: boolean } = {},
+  ) {
     const query = this.db('courses').whereNull('deleted_at');
 
     if (filters.categoryId) query.where('category_id', filters.categoryId);
     if (filters.level) query.where('level', filters.level);
+    if (visibility.instructorId !== undefined) {
+      query.where('instructor_id', visibility.instructorId);
+    }
+    if (visibility.publishedOnly) query.where('is_published', true);
 
     return query
       .select(courseColumns)
@@ -173,13 +180,18 @@ export class CoursesRepository {
     return course;
   }
 
-  findModulesByCourse(courseId: number, filters: ListCourseModulesDto) {
+  findModulesByCourse(
+    courseId: number,
+    filters: ListCourseModulesDto,
+    activeOnly = false,
+  ) {
     const query = this.db('modules')
       .where('course_id', courseId)
       .whereNull('deleted_at');
 
     if (filters.status) query.where('status', filters.status);
     if (filters.order) query.where('order', filters.order);
+    if (activeOnly) query.where('status', 'ACTIVE');
 
     return query
       .select(moduleColumns)
