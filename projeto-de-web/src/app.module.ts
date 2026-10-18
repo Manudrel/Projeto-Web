@@ -11,11 +11,14 @@ import { CourseModulesModule } from './modules/course-modules/course-modules.mod
 import { ProgressModule } from './modules/progress/progress.module.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
 import { AssessmentsModule } from './modules/assessments/assessments.module.js';
+import { EnrollmentModule } from './modules/enrollment/enrollment.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    CoursesModule,
+    EnrollmentModule,
     LessonsModule,
     AuthModule,
     CategoriesModule,
