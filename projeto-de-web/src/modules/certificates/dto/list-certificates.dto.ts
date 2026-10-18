@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Max, Min, IsEnum } from 'class-validator';
+import { CertificateStatus } from '../certificate.entity.js';
 
 const CERTIFICATE_SORT_FIELDS = ['id', 'userId', 'courseId', 'issuedAt'] as const;
 
@@ -33,6 +34,16 @@ export class ListCertificatesDto {
   @IsInt({ message: 'O courseId deve ser um número inteiro' })
   @Min(1, { message: 'O courseId deve ser maior que zero' })
   courseId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filtra pelo status do certificado',
+    enum: CertificateStatus,
+  })
+  @IsOptional()
+  @IsEnum(CertificateStatus, {
+    message: 'O status deve ser valid ou revoked',
+  })
+  status?: CertificateStatus;
 
   @ApiPropertyOptional({
     description: 'Campo para ordenação',
