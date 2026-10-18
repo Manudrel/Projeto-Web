@@ -7,7 +7,7 @@ export enum TypeLesson {
 
 export interface Lesson {
   id: number;
-  moduleId: string;
+  moduleId: number;
   title: string;
   content: string;
   type: TypeLesson;

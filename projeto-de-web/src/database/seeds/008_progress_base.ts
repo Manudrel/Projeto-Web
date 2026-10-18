@@ -15,7 +15,6 @@ export async function seed(knex: Knex): Promise<void> {
   const lessons = await knex('lessons')
     .join('modules', 'modules.id', 'lessons.module_id')
     .where('modules.course_id', enrollment.course_id)
-    .where('lessons.status', 'ACTIVE')
     .select('lessons.id')
     .limit(2);
 
