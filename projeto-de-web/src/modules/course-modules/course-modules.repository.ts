@@ -89,20 +89,22 @@ export class CourseModulesRepository {
     return Number(result?.total ?? 0);
   }
 
-  async create(courseId: number, data: CreateCourseModuleDto) {
-    const order = await this.countByCourse(courseId) + 1;
+  async create(courseId: number, data: CreateCourseModuleDto, order: number) {
+    return this.db.transaction(async (trx) => {
+      await this.shiftOrders(trx, courseId, order, undefined, 1);
 
-    const [courseModule] = await this.db('modules')
-      .insert({
-        course_id: courseId,
-        title: data.title,
-        description: data.description,
-        order,
-        status: data.status,
-      })
-      .returning(moduleColumns);
+      const [courseModule] = await trx('modules')
+        .insert({
+          course_id: courseId,
+          title: data.title,
+          description: data.description,
+          order,
+          status: data.status,
+        })
+        .returning(moduleColumns);
 
-    return courseModule;
+      return courseModule;
+    });
   }
 
 

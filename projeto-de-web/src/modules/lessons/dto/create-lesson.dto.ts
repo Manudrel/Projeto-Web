@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsNotEmpty, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 import { TypeLesson } from '../lessons.entity.js';
 
 export class CreateLessonDto {
@@ -9,6 +10,18 @@ export class CreateLessonDto {
   })
   @IsInt()
   moduleId!: number;
+
+  @ApiProperty({
+    example: 2,
+    description: 'Posição da aula no módulo; se omitida, será adicionada ao final',
+    required: false,
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'A ordem deve ser um número inteiro' })
+  @Min(1, { message: 'A ordem deve ser maior que zero' })
+  order?: number;
 
   @ApiProperty({
     example: 'Introdução ao TypeScript',

@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { ListModulesDto } from './dto/list-modules.dto.js';
@@ -66,8 +66,17 @@ export class CourseModulesService {
         'Apenas o instrutor dono do curso ou um administrador pode criar módulos neste curso',
       );
     }
+//[Falar Regra de negocio 8]
+    const total = await this.courseModulesRepository.countByCourse(courseId);
+    const order = data.order ?? total + 1;
 
-    return this.courseModulesRepository.create(courseId, data);
+    if (order > total + 1) {
+      throw new UnprocessableEntityException(
+        `A ordem não pode ser maior que a próxima posição disponível (${total + 1})`,
+      );
+    }
+
+    return this.courseModulesRepository.create(courseId, data, order);
 
   }
 
@@ -85,7 +94,7 @@ export class CourseModulesService {
       );
 
       if (data.order > total) {
-        throw new BadRequestException(
+        throw new UnprocessableEntityException(
           `A ordem não pode ser maior que a quantidade de módulos do curso (${total})`,
         );
       }

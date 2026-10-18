@@ -21,6 +21,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator.js';
 
@@ -67,6 +68,9 @@ export class CourseModulesController {
   @ApiOperation({ summary: 'Criar módulo' })
   @ApiCreatedResponse({ description: 'Módulo criado' })
   @ApiBadRequestResponse({ description: 'Dados inválidos' })
+  @ApiUnprocessableEntityResponse({
+    description: 'A posição informada deixaria uma lacuna na sequência',
+  })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
   create(
     @Query('courseId', new ParseIntPipe()) courseId: number,  
@@ -81,7 +85,10 @@ export class CourseModulesController {
   @ApiOperation({ summary: 'Atualizar módulo' })
   @ApiOkResponse({ description: 'Módulo atualizado com sucesso' })
   @ApiBadRequestResponse({
-    description: 'Dados inválidos, id inválido ou ordem maior que o total de módulos',
+    description: 'Dados ou id inválidos',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'A posição informada deixaria uma lacuna na sequência',
   })
   @ApiNotFoundResponse({ description: 'Módulo não encontrado' })
   @ApiForbiddenResponse({

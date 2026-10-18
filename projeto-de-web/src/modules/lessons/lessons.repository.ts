@@ -40,7 +40,8 @@ export class LessonsRepository {
 
     return query
       .distinct('lessons.*')
-      .orderBy('lessons.id')
+      .orderBy('lessons.module_id')
+      .orderBy('lessons.order')
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
@@ -78,7 +79,21 @@ export class LessonsRepository {
   }
 
   findById(id: number) {
-    return this.db('lessons').where('id', id).whereNull('deleted_at').first();
+    return this.db('lessons')
+      .where('id', id)
+      .whereNull('deleted_at')
+      .select(
+        'id',
+        'module_id as moduleId',
+        'order',
+        'title',
+        'content',
+        'type',
+        'created_at as createdAt',
+        'updated_at as updatedAt',
+        'deleted_at as deletedAt',
+      )
+      .first();
   }
 
   findLessonAccessById(id: number) {
@@ -123,6 +138,15 @@ export class LessonsRepository {
     return this.db('modules').where('id', id).whereNull('deleted_at').first();
   }
 
+  async countByModule(moduleId: number) {
+    const result = await this.db('lessons')
+      .where('module_id', moduleId)
+      .whereNull('deleted_at')
+      .count<{ total: string }>('id as total')
+      .first();
+
+    return Number(result?.total ?? 0);
+  }
 
   findByTitleAndModule(
     title: string,
@@ -139,38 +163,142 @@ export class LessonsRepository {
     return query.first();
   }
 
-  async create(data: CreateLessonDto) {
-    const [lesson] = await this.db('lessons')
-      .insert({
-        module_id: data.moduleId,
-        title: data.title,
-        content: data.content,
-        type: data.type,
-      })
-      .returning('*');
+  async create(data: CreateLessonDto, order: number) {
+    return this.db.transaction(async (trx) => {
+      await this.shiftOrders(trx, data.moduleId, order, undefined, 1);
 
-    return lesson;
+      const [lesson] = await trx('lessons')
+        .insert({
+          module_id: data.moduleId,
+          order,
+          title: data.title,
+          content: data.content,
+          type: data.type,
+        })
+        .returning([
+          'id',
+          'module_id as moduleId',
+          'order',
+          'title',
+          'content',
+          'type',
+          'created_at as createdAt',
+          'updated_at as updatedAt',
+          'deleted_at as deletedAt',
+        ]);
+
+      return lesson;
+    });
   }
 
-  async update(id: number, data: UpdateLessonDto) {
-    const [lesson] = await this.db('lessons')
-      .where('id', id)
+  async update(
+    id: number,
+    currentModuleId: number,
+    currentOrder: number,
+    targetModuleId: number,
+    targetOrder: number,
+    data: UpdateLessonDto,
+  ) {
+    return this.db.transaction(async (trx) => {
+      const moduleChanged = targetModuleId !== currentModuleId;
+      const orderChanged = targetOrder !== currentOrder;
+
+      if (moduleChanged || orderChanged) {
+        await trx('lessons').where('id', id).update({ order: 0 });
+
+        if (moduleChanged) {
+          await this.shiftOrders(
+            trx,
+            currentModuleId,
+            currentOrder + 1,
+            undefined,
+            -1,
+          );
+          await this.shiftOrders(trx, targetModuleId, targetOrder, undefined, 1);
+        } else if (targetOrder < currentOrder) {
+          await this.shiftOrders(
+            trx,
+            currentModuleId,
+            targetOrder,
+            currentOrder - 1,
+            1,
+          );
+        } else {
+          await this.shiftOrders(
+            trx,
+            currentModuleId,
+            currentOrder + 1,
+            targetOrder,
+            -1,
+          );
+        }
+      }
+
+      const changes: Record<string, unknown> = {
+        order: targetOrder,
+        updated_at: trx.fn.now(),
+      };
+      if (moduleChanged) changes.module_id = targetModuleId;
+      if (data.title !== undefined) changes.title = data.title;
+      if (data.content !== undefined) changes.content = data.content;
+      if (data.type !== undefined) changes.type = data.type;
+
+      const [lesson] = await trx('lessons')
+        .where('id', id)
+        .whereNull('deleted_at')
+        .update(changes)
+        .returning([
+          'id',
+          'module_id as moduleId',
+          'order',
+          'title',
+          'content',
+          'type',
+          'created_at as createdAt',
+          'updated_at as updatedAt',
+          'deleted_at as deletedAt',
+        ]);
+
+      return lesson;
+    });
+  }
+
+  async delete(id: number, moduleId: number, order: number) {
+    await this.db.transaction(async (trx) => {
+      await trx('lessons')
+        .where('id', id)
+        .whereNull('deleted_at')
+        .update({ deleted_at: trx.fn.now() });
+
+      await this.shiftOrders(trx, moduleId, order + 1, undefined, -1);
+    });
+  }
+
+  private async shiftOrders(
+    trx: Knex.Transaction,
+    moduleId: number,
+    from: number,
+    to: number | undefined,
+    offset: number,
+  ) {
+    const affected = trx('lessons')
+      .where('module_id', moduleId)
       .whereNull('deleted_at')
-      .update({
-        module_id: data.moduleId,
-        title: data.title,
-        content: data.content,
-        type: data.type,
-        updated_at: this.db.fn.now(),
-      })
-      .returning('*');
+      .where('order', '>=', from);
 
-    return lesson;
-  }
+    if (to !== undefined) affected.where('order', '<=', to);
 
-  async delete(id: number) {
-    await this.db('lessons')
-      .where('id', id)
-      .update({ deleted_at: this.db.fn.now() });
+    await affected.update({ order: trx.raw('-"order"') });
+
+    const shifted = trx('lessons')
+      .where('module_id', moduleId)
+      .whereNull('deleted_at')
+      .where('order', '<', 0);
+
+    if (to !== undefined) {
+      shifted.where('order', '>=', -to).where('order', '<=', -from);
+    }
+
+    await shifted.update({ order: trx.raw('-"order" + ?', [offset]) });
   }
 }

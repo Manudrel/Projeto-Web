@@ -1,17 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, Max, Min } from 'class-validator';
 import { statusEnrollment } from '../enrollment.entity.js';
 
 export class UpdateEnrollmentDto {
   @ApiPropertyOptional({
     description: 'Status da matrícula',
-    enum: statusEnrollment,
-    example: statusEnrollment.CANCELLED,
+    enum: [statusEnrollment.ACTIVE, statusEnrollment.COMPLETED],
+    example: statusEnrollment.ACTIVE,
   })
   @IsOptional()
-  @IsEnum(statusEnrollment, {
-    message: 'O status deve ser ACTIVE, CANCELLED ou COMPLETED',
+  @IsIn([statusEnrollment.ACTIVE, statusEnrollment.COMPLETED], {
+    message:
+      'CANCELLED só pode ser definido pela função de cancelamento da matrícula',
   })
   status?: statusEnrollment;
 

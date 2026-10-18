@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { LessonsRepository } from './lessons.repository.js';
@@ -46,6 +47,14 @@ export class LessonsService {
         'Não é possível criar aula em um módulo inativo',
       );
     }
+
+    const lessonCount = await this.lessonsRepository.countByModule(data.moduleId);
+    const order = data.order ?? lessonCount + 1;
+    if (order > lessonCount + 1) {
+      throw new UnprocessableEntityException(
+        `A ordem não pode ser maior que a próxima posição disponível (${lessonCount + 1})`,
+      );
+    }
     // Regra de negócio -> Verifica se já existe uma aula com o mesmo título no mesmo módulo
     const lessonWithSameTitle =
       await this.lessonsRepository.findByTitleAndModule(
@@ -59,7 +68,7 @@ export class LessonsService {
       );
     }
 
-    return this.lessonsRepository.create(data);
+    return this.lessonsRepository.create(data, order);
   }
 
   async update(
@@ -75,15 +84,15 @@ export class LessonsService {
 
     await this.ensureCanManageModule(lesson.moduleId, user);
 
-    const moduleChanged =
-      data.moduleId !== undefined && data.moduleId !== lesson.moduleId;
+    const targetModuleId = data.moduleId ?? lesson.moduleId;
+    const moduleChanged = targetModuleId !== lesson.moduleId;
     const titleChanged =
       data.title !== undefined && data.title !== lesson.title;
 
     if (moduleChanged) {
-      await this.ensureCanManageModule(data.moduleId!, user);
+      await this.ensureCanManageModule(targetModuleId, user);
       const module = await this.lessonsRepository.findModuleById(
-        data.moduleId!,
+        targetModuleId,
       );
 
       if (!module) {
@@ -95,6 +104,20 @@ export class LessonsService {
           'Não é possível mover a aula para um módulo inativo',
         );
       }
+    }
+
+    const targetModuleCount = moduleChanged
+      ? await this.lessonsRepository.countByModule(targetModuleId)
+      : await this.lessonsRepository.countByModule(lesson.moduleId);
+    const targetOrder = moduleChanged
+      ? (data.order ?? targetModuleCount + 1)
+      : (data.order ?? lesson.order);
+    const maxOrder = moduleChanged ? targetModuleCount + 1 : targetModuleCount;
+
+    if (targetOrder > maxOrder) {
+      throw new UnprocessableEntityException(
+        `A ordem não pode ser maior que a quantidade disponível (${maxOrder})`,
+      );
     }
 
     if (moduleChanged || titleChanged) {
@@ -112,7 +135,14 @@ export class LessonsService {
       }
     }
 
-    return this.lessonsRepository.update(id, data);
+    return this.lessonsRepository.update(
+      id,
+      lesson.moduleId,
+      lesson.order,
+      targetModuleId,
+      targetOrder,
+      data,
+    );
   }
 
   async delete(id: number, user: AuthenticatedUser) {
@@ -123,7 +153,7 @@ export class LessonsService {
     }
     
     await this.ensureCanManageModule(lesson.moduleId, user);
-    await this.lessonsRepository.delete(id);
+    await this.lessonsRepository.delete(id, lesson.moduleId, lesson.order);
   }
 
   private async ensureCanRead(id: number, user: AuthenticatedUser) {

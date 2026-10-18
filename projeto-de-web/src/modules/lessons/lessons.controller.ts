@@ -21,6 +21,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator.js';
@@ -66,6 +67,9 @@ export class LessonsController {
   @ApiBadRequestResponse({
     description: 'Dados inválidos ou módulo inativo',
   })
+  @ApiUnprocessableEntityResponse({
+    description: 'A posição informada deixaria uma lacuna na sequência',
+  })
   @ApiNotFoundResponse({ description: 'Módulo não encontrado' })
   @ApiConflictResponse({
     description: 'Já existe uma aula com esse título nesse módulo',
@@ -80,6 +84,9 @@ export class LessonsController {
   @ApiOkResponse({ description: 'Aula atualizada' })
   @ApiBadRequestResponse({
     description: 'Dados inválidos ou módulo inativo',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'A posição informada deixaria uma lacuna na sequência',
   })
   @ApiNotFoundResponse({ description: 'Aula ou módulo não encontrados' })
   @ApiConflictResponse({

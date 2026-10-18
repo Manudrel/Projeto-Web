@@ -8,6 +8,7 @@ export enum TypeLesson {
 export interface Lesson {
   id: number;
   moduleId: number;
+  order: number;
   title: string;
   content: string;
   type: TypeLesson;

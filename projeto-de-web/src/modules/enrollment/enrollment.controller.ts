@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -30,6 +31,7 @@ const idPipe = new ParseIntPipe({
 });
 
 @ApiTags('Matrículas')
+@ApiBearerAuth()
 @Controller('enrollments')
 export class EnrollmentController {
   constructor(private readonly enrollmentService: EnrollmentService) {}
@@ -59,10 +61,27 @@ export class EnrollmentController {
     return this.enrollmentService.create(data);
   }
 
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Cancelar matrícula ativa' })
+  @ApiOkResponse({
+    description:
+      'Matrícula cancelada; status passa para CANCELLED e deletedAt registra o horário',
+  })
+  @ApiBadRequestResponse({
+    description: 'Somente matrículas ACTIVE podem ser canceladas',
+  })
+  @ApiNotFoundResponse({ description: 'Matrícula não encontrada' })
+  cancel(@Param('id', idPipe) id: number) {
+    return this.enrollmentService.cancel(id);
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar matrícula' })
   @ApiOkResponse({ description: 'Matrícula atualizada' })
-  @ApiBadRequestResponse({ description: 'Id ou dados inválidos' })
+  @ApiBadRequestResponse({
+    description:
+      'Dados inválidos; CANCELLED deve ser definido pela rota /:id/cancel',
+  })
   @ApiNotFoundResponse({ description: 'Matrícula não encontrada' })
   update(
     @Param('id', idPipe) id: number,

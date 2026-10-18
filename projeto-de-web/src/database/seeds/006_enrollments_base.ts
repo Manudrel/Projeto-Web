@@ -1,42 +1,80 @@
+
 import type { Knex } from 'knex';
 
-interface IdRow {
-  id: number;
-}
+const enrollments = [
+  {
+    id: 1,
+    user_id: 1,
+    course_id: 1,
+    status: 'ACTIVE',
+    progress: 0,
+  },
+  {
+    id: 2,
+    user_id: 1,
+    course_id: 2,
+    status: 'COMPLETED',
+    progress: 100,
+  },
+  {
+    id: 3,
+    user_id: 1,
+    course_id: 4,
+    status: 'CANCELLED',
+    progress: 45,
+  },
+  
+];
 
 export async function seed(knex: Knex): Promise<void> {
-  const students = (await knex('users')
-    .join('profiles', 'profiles.id', 'users.profile_id')
-    .where('profiles.role', 'STUDENT')
-    .where('users.status', 'ACTIVE')
-    .whereNull('users.deleted_at')
-    .orderBy('users.id')
-    .limit(3)
-    .select('users.id')) as IdRow[];
+  await knex.transaction(async (trx) => {
+    for (const enrollment of enrollments) {
+      const existingById = await trx('enrollments')
+        .where({ id: enrollment.id })
+        .first();
 
-  const courses = (await knex('courses')
-    .where('is_published', true)
-    .whereNull('deleted_at')
-    .orderBy('id')
-    .select('id')) as IdRow[];
+      if (existingById) {
+        await trx('enrollments')
+          .where({ id: enrollment.id })
+          .update({
+            user_id: enrollment.user_id,
+            course_id: enrollment.course_id,
+            status: enrollment.status,
+            progress: enrollment.progress,
+            updated_at: trx.fn.now(),
+          });
 
-  for (const student of students) {
-    for (const course of courses) {
-      const existingOpenEnrollment = await knex('enrollments')
-        .where('user_id', student.id)
-        .where('course_id', course.id)
-        .whereIn('status', ['ACTIVE', 'COMPLETED'])
-        .whereNull('deleted_at')
-        .first('id');
+        continue;
+      }
 
-      if (existingOpenEnrollment) continue;
+      const isOpenEnrollment =
+        enrollment.status === 'ACTIVE' ||
+        enrollment.status === 'COMPLETED';
 
-      await knex('enrollments').insert({
-        user_id: student.id,
-        course_id: course.id,
-        status: 'ACTIVE',
-        progress: 0,
-      });
+      if (isOpenEnrollment) {
+        const existingOpenEnrollment = await trx('enrollments')
+          .where({
+            user_id: enrollment.user_id,
+            course_id: enrollment.course_id,
+          })
+          .whereIn('status', ['ACTIVE', 'COMPLETED'])
+          .whereNull('deleted_at')
+          .first();
+
+        if (existingOpenEnrollment) {
+          continue;
+        }
+      }
+
+      await trx('enrollments').insert(enrollment);
     }
-  }
+
+    await trx.raw(`
+      SELECT setval(
+        pg_get_serial_sequence('enrollments', 'id'),
+        COALESCE((SELECT MAX(id) FROM enrollments), 1),
+        EXISTS (SELECT 1 FROM enrollments)
+      )
+    `);
+  });
 }

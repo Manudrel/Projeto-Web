@@ -38,9 +38,30 @@ export class EnrollmentRepository {
   findById(id: number) {
     return this.db('enrollments')
       .where('id', id)
-      .whereNull('deleted_at')
       .select(enrollmentColumns)
       .first<Enrollment>();
+  }
+
+  findOpenEnrollmentByUserAndCourse(userId: number, courseId: number) {
+    return this.db('enrollments')
+      .where({ user_id: userId, course_id: courseId })
+      .whereIn('status', ['ACTIVE', 'COMPLETED'])
+      .whereNull('deleted_at')
+      .first('id');
+  }
+
+  findUserStatus(userId: number) {
+    return this.db('users')
+      .where('id', userId)
+      .whereNull('deleted_at')
+      .first('status');
+  }
+
+  findCoursePublication(courseId: number) {
+    return this.db('courses')
+      .where('id', courseId)
+      .whereNull('deleted_at')
+      .first('is_published as isPublished');
   }
 
   async create(data: NewEnrollment) {
@@ -66,6 +87,20 @@ export class EnrollmentRepository {
       .where('id', id)
       .whereNull('deleted_at')
       .update(changes)
+      .returning(enrollmentColumns);
+
+    return enrollment as Enrollment | undefined;
+  }
+
+  async cancel(id: number) {
+    const [enrollment] = await this.db('enrollments')
+      .where('id', id)
+      .whereNull('deleted_at')
+      .update({
+        status: 'CANCELLED',
+        deleted_at: this.db.fn.now(),
+        updated_at: this.db.fn.now(),
+      })
       .returning(enrollmentColumns);
 
     return enrollment as Enrollment | undefined;
