@@ -158,7 +158,6 @@ export class CoursesRepository {
       .where('modules.status', 'ACTIVE')
       .where('lessons.status', 'ACTIVE')
       .whereNull('modules.deleted_at')
-      .whereNull('lessons.deleted_at')
       .first('lessons.id');
   }
 
@@ -234,8 +233,7 @@ export class CoursesRepository {
       .join('lessons', 'lessons.id', 'progress.lesson_id')
       .where('enrollments.course_id', courseId)
       .whereNull('enrollments.deleted_at')
-      .whereNull('users.deleted_at')
-      .whereNull('lessons.deleted_at');
+      .whereNull('users.deleted_at');
 
     if (filters.status) query.where('enrollments.status', filters.status);
     if (filters.completed !== undefined) {

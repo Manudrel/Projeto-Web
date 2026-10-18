@@ -58,6 +58,13 @@ export async function seed(knex: Knex): Promise<void> {
       status: index === 2 ? 'INACTIVE' : 'ACTIVE',
       profile_id: studentProfile.id,
     })),
+    {
+      name: 'Student Context Demo',
+      email: 'student.context@example.com',
+      password_hash: passwordHash,
+      status: 'ACTIVE',
+      profile_id: studentProfile.id,
+    },
   ];
 
   const [adminUser, ...demoUsers] = users;

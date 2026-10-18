@@ -9,17 +9,18 @@ import { ListLessonProgressDto } from './dto/list-lesson-progress.dto.js';
 export class LessonsRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
-  findAll(
+  async findAll(
     filters: ListLessonsDto,
     visibility: {
       role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
       userId: number;
     },
   ) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
     const query = this.db('lessons')
       .join('modules', 'modules.id', 'lessons.module_id')
       .join('courses', 'courses.id', 'modules.course_id')
-      .whereNull('lessons.deleted_at')
       .whereNull('modules.deleted_at')
       .whereNull('courses.deleted_at');
 
@@ -35,15 +36,33 @@ export class LessonsRepository {
         .whereNull('enrollments.deleted_at');
     }
 
-    if (filters.moduleId) query.where('lessons.module_id', filters.moduleId);
+    if (filters.moduleId !== undefined) {
+      query.where('lessons.module_id', filters.moduleId);
+    }
     if (filters.type) query.where('lessons.type', filters.type);
 
-    return query
+    const countResult = await query
+      .clone()
+      .countDistinct<{ total: string | number }>('lessons.id as total')
+      .first();
+    const total = Number(countResult?.total ?? 0);
+    const data = await query
+      .clone()
       .distinct('lessons.*')
       .orderBy('lessons.module_id')
       .orderBy('lessons.order')
-      .limit(filters.limit)
-      .offset((filters.page - 1) * filters.limit);
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   hasProgressByLesson(lessonId: number) {
@@ -81,7 +100,6 @@ export class LessonsRepository {
   findById(id: number) {
     return this.db('lessons')
       .where('id', id)
-      .whereNull('deleted_at')
       .select(
         'id',
         'module_id as moduleId',
@@ -91,7 +109,6 @@ export class LessonsRepository {
         'type',
         'created_at as createdAt',
         'updated_at as updatedAt',
-        'deleted_at as deletedAt',
       )
       .first();
   }
@@ -101,7 +118,6 @@ export class LessonsRepository {
       .join('modules', 'modules.id', 'lessons.module_id')
       .join('courses', 'courses.id', 'modules.course_id')
       .where('lessons.id', id)
-      .whereNull('lessons.deleted_at')
       .whereNull('modules.deleted_at')
       .whereNull('courses.deleted_at')
       .select(
@@ -141,7 +157,6 @@ export class LessonsRepository {
   async countByModule(moduleId: number) {
     const result = await this.db('lessons')
       .where('module_id', moduleId)
-      .whereNull('deleted_at')
       .count<{ total: string }>('id as total')
       .first();
 
@@ -155,8 +170,7 @@ export class LessonsRepository {
   ) {
     const query = this.db('lessons')
       .whereRaw('LOWER(title) = LOWER(?)', [title])
-      .where('module_id', moduleId)
-      .whereNull('deleted_at');
+      .where('module_id', moduleId);
 
     if (ignoreLessonId) query.whereNot('id', ignoreLessonId);
 
@@ -184,7 +198,6 @@ export class LessonsRepository {
           'type',
           'created_at as createdAt',
           'updated_at as updatedAt',
-          'deleted_at as deletedAt',
         ]);
 
       return lesson;
@@ -245,7 +258,6 @@ export class LessonsRepository {
 
       const [lesson] = await trx('lessons')
         .where('id', id)
-        .whereNull('deleted_at')
         .update(changes)
         .returning([
           'id',
@@ -256,7 +268,6 @@ export class LessonsRepository {
           'type',
           'created_at as createdAt',
           'updated_at as updatedAt',
-          'deleted_at as deletedAt',
         ]);
 
       return lesson;
@@ -265,10 +276,7 @@ export class LessonsRepository {
 
   async delete(id: number, moduleId: number, order: number) {
     await this.db.transaction(async (trx) => {
-      await trx('lessons')
-        .where('id', id)
-        .whereNull('deleted_at')
-        .update({ deleted_at: trx.fn.now() });
+      await trx('lessons').where('id', id).delete();
 
       await this.shiftOrders(trx, moduleId, order + 1, undefined, -1);
     });
@@ -283,7 +291,6 @@ export class LessonsRepository {
   ) {
     const affected = trx('lessons')
       .where('module_id', moduleId)
-      .whereNull('deleted_at')
       .where('order', '>=', from);
 
     if (to !== undefined) affected.where('order', '<=', to);
@@ -292,7 +299,6 @@ export class LessonsRepository {
 
     const shifted = trx('lessons')
       .where('module_id', moduleId)
-      .whereNull('deleted_at')
       .where('order', '<', 0);
 
     if (to !== undefined) {

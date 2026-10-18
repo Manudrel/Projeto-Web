@@ -22,7 +22,7 @@ export class EnrollmentRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
   findAll(filters: ListEnrollmentsDto) {
-    const query = this.db('enrollments').whereNull('deleted_at');
+    const query = this.db('enrollments');
 
     if (filters.userId !== undefined) query.where('user_id', filters.userId);
     if (filters.courseId !== undefined) query.where('course_id', filters.courseId);
@@ -30,7 +30,7 @@ export class EnrollmentRepository {
 
     return query
       .select(enrollmentColumns)
-      .orderBy('id', 'desc')
+      .orderBy('id', 'asc')
       .limit(filters.limit)
       .offset((filters.page - 1) * filters.limit);
   }
@@ -106,13 +106,13 @@ export class EnrollmentRepository {
     return enrollment as Enrollment | undefined;
   }
 
-  async delete(id: number): Promise<void> {
-    await this.db('enrollments')
+  async delete(id: number): Promise<boolean> {
+    const deletedRows = await this.db('enrollments')
       .where('id', id)
-      .whereNull('deleted_at')
-      .update({
-        deleted_at: this.db.fn.now(),
-        updated_at: this.db.fn.now(),
-      });
+      .where('status', 'CANCELLED')
+      .delete()
+      .returning('id');
+
+    return deletedRows.length > 0;
   }
 }

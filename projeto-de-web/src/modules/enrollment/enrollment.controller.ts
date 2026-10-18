@@ -15,12 +15,16 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto.js';
 import { ListEnrollmentsDto } from './dto/list-enrollments.dto.js';
 import { UpdateEnrollmentDto } from './dto/update-enrollment.dto.js';
@@ -54,14 +58,20 @@ export class EnrollmentController {
   }
 
   @Post()
+  @RequirePermissions('enrollments:create')
   @ApiOperation({ summary: 'Criar matrícula' })
   @ApiCreatedResponse({ description: 'Matrícula criada' })
   @ApiBadRequestResponse({ description: 'Dados inválidos' })
-  create(@Body() data: CreateEnrollmentDto) {
-    return this.enrollmentService.create(data);
+  @ApiForbiddenResponse({ description: 'Apenas instrutores e administradores podem criar matrículas' })
+  create(
+    @Body() data: CreateEnrollmentDto,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.enrollmentService.create(data, actor);
   }
 
   @Patch(':id/cancel')
+  @RequirePermissions('enrollments:cancel')
   @ApiOperation({ summary: 'Cancelar matrícula ativa' })
   @ApiOkResponse({
     description:
@@ -71,11 +81,16 @@ export class EnrollmentController {
     description: 'Somente matrículas ACTIVE podem ser canceladas',
   })
   @ApiNotFoundResponse({ description: 'Matrícula não encontrada' })
-  cancel(@Param('id', idPipe) id: number) {
-    return this.enrollmentService.cancel(id);
+  @ApiForbiddenResponse({ description: 'Apenas instrutores e administradores podem cancelar matrículas' })
+  cancel(
+    @Param('id', idPipe) id: number,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.enrollmentService.cancel(id, actor);
   }
 
   @Patch(':id')
+  @RequirePermissions('enrollments:update')
   @ApiOperation({ summary: 'Atualizar matrícula' })
   @ApiOkResponse({ description: 'Matrícula atualizada' })
   @ApiBadRequestResponse({
@@ -83,20 +98,28 @@ export class EnrollmentController {
       'Dados inválidos; CANCELLED deve ser definido pela rota /:id/cancel',
   })
   @ApiNotFoundResponse({ description: 'Matrícula não encontrada' })
+  @ApiForbiddenResponse({ description: 'Apenas instrutores e administradores podem atualizar matrículas' })
   update(
     @Param('id', idPipe) id: number,
     @Body() data: UpdateEnrollmentDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    return this.enrollmentService.update(id, data);
+    return this.enrollmentService.update(id, data, actor);
   }
 
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Excluir matrícula' })
   @ApiNoContentResponse({ description: 'Matrícula excluída' })
-  @ApiBadRequestResponse({ description: 'O id deve ser um número inteiro' })
+  @ApiBadRequestResponse({
+    description: 'A matrícula precisa estar com status CANCELLED',
+  })
   @ApiNotFoundResponse({ description: 'Matrícula não encontrada' })
-  delete(@Param('id', idPipe) id: number) {
-    return this.enrollmentService.delete(id);
+  @ApiForbiddenResponse({ description: 'Apenas instrutores e administradores podem excluir matrículas' })
+  delete(
+    @Param('id', idPipe) id: number,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.enrollmentService.delete(id, actor);
   }
 }

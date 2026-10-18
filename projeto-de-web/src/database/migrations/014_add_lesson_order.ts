@@ -25,7 +25,7 @@ export async function up(knex: Knex): Promise<void> {
   }
 
   await knex.raw(
-    'CREATE UNIQUE INDEX IF NOT EXISTS lessons_module_order_unique ON lessons (module_id, "order") WHERE deleted_at IS NULL',
+    'CREATE UNIQUE INDEX IF NOT EXISTS lessons_module_order_unique ON lessons (module_id, "order")',
   );
 }
 

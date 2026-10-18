@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { ListEnrollmentsDto } from './dto/list-enrollments.dto.js';
 import { UpdateEnrollmentDto } from './dto/update-enrollment.dto.js';
 import { statusEnrollment } from './enrollment.entity.js';
 import { EnrollmentRepository } from './enrollment.repository.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 
 @Injectable()
 export class EnrollmentService {
@@ -28,7 +30,10 @@ export class EnrollmentService {
     return enrollment;
   }
 
-  async create(data: CreateEnrollmentDto) {
+  async create(data: CreateEnrollmentDto, actor: AuthenticatedUser) {
+    
+    this.ensureCanManage(actor);
+
     const [user, course, existingEnrollment] = await Promise.all([
       this.enrollmentRepository.findUserStatus(data.userId),
       this.enrollmentRepository.findCoursePublication(data.courseId),
@@ -41,13 +46,13 @@ export class EnrollmentService {
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
-
+    //RN 1 -> Usuário ativo FEITO
     if (user.status !== 'ACTIVE') {
       throw new BadRequestException(
         'Não é possível matricular um usuário inativo',
       );
     }
-
+    //RN 1 -> Curso publicado FEITO
     if (!course) {
       throw new NotFoundException('Curso não encontrado');
     }
@@ -67,14 +72,22 @@ export class EnrollmentService {
     return this.enrollmentRepository.create(data);
   }
 
-  async update(id: number, data: UpdateEnrollmentDto) {
-    if (data.status === statusEnrollment.CANCELLED) {
-      throw new BadRequestException(
-        'CANCELLED só pode ser definido pela função de cancelamento da matrícula',
-      );
-    }
+  async update(
+    id: number,
+    data: UpdateEnrollmentDto,
+    actor: AuthenticatedUser,
+  ) {
+    this.ensureCanManage(actor);
+    
+    if (data.status !== undefined && data.status !== statusEnrollment.ACTIVE && data.status !== statusEnrollment.COMPLETED) 
+      {
+        throw new BadRequestException(
+          'Status inválido; deve ser ACTIVE ou COMPLETED',
+        );
+      }
 
-    await this.findById(id);
+      
+      await this.findById(id);
 
     const enrollment = await this.enrollmentRepository.update(id, data);
 
@@ -87,7 +100,9 @@ export class EnrollmentService {
 
 
 //Regra de negocio 7 cancelamento de matricula FEITO
-  async cancel(id: number) {
+  async cancel(id: number, actor: AuthenticatedUser) {
+    this.ensureCanManage(actor);
+
     const enrollment = await this.findById(id);
 
     if (enrollment.status !== statusEnrollment.ACTIVE) {
@@ -105,8 +120,29 @@ export class EnrollmentService {
     return canceledEnrollment;
   }
 
-  async delete(id: number): Promise<void> {
-    await this.findById(id);
-    await this.enrollmentRepository.delete(id);
+  async delete(id: number, actor: AuthenticatedUser): Promise<void> {
+    this.ensureCanManage(actor);
+    const enrollment = await this.findById(id);
+
+    if (enrollment.status !== statusEnrollment.CANCELLED) {
+      throw new BadRequestException(
+        'A matrícula só pode ser excluída quando estiver com status CANCELLED',
+      );
+    }
+
+    const deleted = await this.enrollmentRepository.delete(id);
+    if (!deleted) {
+      throw new NotFoundException('Matrícula não encontrada');
+    }
+  }
+
+//RN 9 -> Propriedade do instrutor FEITO
+// oque isso faz é fazer que só o instrutor dono do curso e o admins possar criar deletar e atualizar
+  private ensureCanManage(actor: AuthenticatedUser) {
+    if (actor.profile.role !== 'ADMIN' && actor.profile.role !== 'INSTRUCTOR') {
+      throw new ForbiddenException(
+        'Apenas instrutores e administradores podem gerenciar matrículas',
+      );
+    }
   }
 }

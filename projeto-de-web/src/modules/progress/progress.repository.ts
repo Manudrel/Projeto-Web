@@ -58,7 +58,6 @@ export class ProgressRepository {
     return this.db('lessons')
       .join('modules', 'modules.id', 'lessons.module_id')
       .where('lessons.id', lessonId)
-      .whereNull('lessons.deleted_at')
       .select('modules.course_id as courseId')
       .first();
   }
@@ -103,7 +102,6 @@ export class ProgressRepository {
       .join('modules', 'modules.id', 'lessons.module_id')
       .where('modules.course_id', courseId)
       .whereNull('modules.deleted_at')
-      .whereNull('lessons.deleted_at')
       .where('lessons.status', 'ACTIVE');
 
     const totalRow = await lessons().count<{ total: string }>('lessons.id as total').first();

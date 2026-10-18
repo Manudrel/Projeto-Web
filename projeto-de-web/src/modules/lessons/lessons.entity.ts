@@ -15,5 +15,4 @@ export interface Lesson {
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
 }

@@ -20,8 +20,6 @@ export async function up(knex: Knex): Promise<void> {
       .timestamp('updated_at', { useTz: true })
       .notNullable()
       .defaultTo(knex.fn.now());
-    table.timestamp('deleted_at', { useTz: true }).nullable();
-
     table.index('module_id', 'idx_lessons_module_id');
     table.index('type', 'idx_lessons_type');
     
@@ -37,10 +35,6 @@ export async function up(knex: Knex): Promise<void> {
         .onUpdate('CASCADE');
     */
 });
-
-  await knex.raw(
-    `CREATE INDEX idx_lessons_module_active ON lessons (module_id) WHERE deleted_at IS NULL`,
-  );
 
   await knex.raw(`
     CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$

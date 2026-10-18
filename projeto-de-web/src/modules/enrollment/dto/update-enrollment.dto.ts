@@ -12,7 +12,7 @@ export class UpdateEnrollmentDto {
   @IsOptional()
   @IsIn([statusEnrollment.ACTIVE, statusEnrollment.COMPLETED], {
     message:
-      'CANCELLED só pode ser definido pela função de cancelamento da matrícula',
+          'Status inválido; deve ser ACTIVE ou COMPLETED',
   })
   status?: statusEnrollment;
 

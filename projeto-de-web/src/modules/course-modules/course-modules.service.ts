@@ -66,7 +66,8 @@ export class CourseModulesService {
         'Apenas o instrutor dono do curso ou um administrador pode criar módulos neste curso',
       );
     }
-//[Falar Regra de negocio 8]
+//RN 8 -> Ordem do módulo FEITO
+// oque isso faz é que quando o instrutor cria um modulo ele vai ser criado na ultima posição do curso
     const total = await this.courseModulesRepository.countByCourse(courseId);
     const order = data.order ?? total + 1;
 
