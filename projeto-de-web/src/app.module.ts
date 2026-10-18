@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { CourseModulesModule } from './modules/course-modules/course-modules.module.js';
+import { ProfilesModule } from './modules/profiles/profiles.module.js';
 import { ProgressModule } from './modules/progress/progress.module.js';
 import { CoursesModule } from './modules/courses/courses.module.js';
 import { AssessmentsModule } from './modules/assessments/assessments.module.js';
@@ -24,6 +25,7 @@ import { EnrollmentModule } from './modules/enrollment/enrollment.module.js';
     CategoriesModule,
     CourseModulesModule,
     ProgressModule,
+    ProfilesModule,
     CoursesModule,
     UsersModule,
     AssessmentsModule,
