@@ -1,29 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
-import type {
-  AuthAccount,
-  AuthUserJoinRow,
-  AuthenticatedUser,
-  UserRole,
-} from './auth.types.js';
-
-interface InsertedId {
-  id: number;
-}
-
-interface RefreshTokenRow {
-  id: number;
-  user_id: number;
-}
-
-interface ResetTokenRow {
-  id: number;
-  user_id: number;
-}
+import type { AuthAccount } from './auth.types.js';
 
 @Injectable()
 export class AuthRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
+
+  async emailExists(email: string): Promise<boolean> {
+    const user = await this.db('users')
+      .whereRaw('LOWER(email) = ?', [email.toLowerCase()])
+      .whereNull('deleted_at')
+      .first('id');
+    return Boolean(user);
+  }
 
   async findAccountByEmail(email: string): Promise<AuthAccount | null> {
     const result = await this.db('users as u')
@@ -35,18 +24,35 @@ export class AuthRepository {
       .whereNull('p.deleted_at')
       .where('p.status', 'ACTIVE')
       .select(
-        'u.id as id',
-        'u.name as name',
-        'u.email as email',
-        'u.password_hash as password_hash',
-        'u.status as status',
+        'u.id',
+        'u.name',
+        'u.email',
+        'u.password_hash',
+        'u.status',
         'p.id as profile_id',
         'p.name as profile_name',
-        'p.role as role',
+        'p.role',
         'perm.name as permission_name',
       );
 
-    return this.accountFromRows(result as unknown as AuthUserJoinRow[]);
+    const row = result[0];
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      passwordHash: row.password_hash,
+      status: row.status,
+      profile: {
+        id: row.profile_id,
+        name: row.profile_name,
+        role: row.role,
+      },
+      permissions: [
+        ...new Set(result.flatMap((item) => item.permission_name ?? [])),
+      ],
+    };
   }
 
   async findAccountById(id: number): Promise<AuthAccount | null> {
@@ -59,25 +65,21 @@ export class AuthRepository {
       .whereNull('p.deleted_at')
       .where('p.status', 'ACTIVE')
       .select(
-        'u.id as id',
-        'u.name as name',
-        'u.email as email',
-        'u.password_hash as password_hash',
-        'u.status as status',
+        'u.id',
+        'u.name',
+        'u.email',
+        'u.password_hash',
+        'u.status',
         'p.id as profile_id',
         'p.name as profile_name',
-        'p.role as role',
+        'p.role',
         'perm.name as permission_name',
       );
 
-    return this.accountFromRows(result as unknown as AuthUserJoinRow[]);
-  }
-
-  private accountFromRows(rows: AuthUserJoinRow[]): AuthAccount | null {
-    const row = rows[0];
+    const row = result[0];
     if (!row) return null;
 
-    const user: AuthAccount = {
+    return {
       id: row.id,
       name: row.name,
       email: row.email,
@@ -88,13 +90,10 @@ export class AuthRepository {
         name: row.profile_name,
         role: row.role,
       },
-      permissions: [],
+      permissions: [
+        ...new Set(result.flatMap((item) => item.permission_name ?? [])),
+      ],
     };
-
-    user.permissions = [
-      ...new Set(rows.flatMap((item) => item.permission_name ?? [])),
-    ];
-    return user;
   }
 
   async createStudentUser(
@@ -107,11 +106,11 @@ export class AuthRepository {
         .where('role', 'STUDENT')
         .where('status', 'ACTIVE')
         .whereNull('deleted_at')
-        .first<{ id: number }>('id');
+        .first('id');
 
       if (!profile) return null;
 
-      const result = await transaction('users')
+      const [user] = await transaction('users')
         .insert({
           name,
           email,
@@ -120,8 +119,6 @@ export class AuthRepository {
           profile_id: profile.id,
         })
         .returning('id');
-
-      const [user] = result as unknown as InsertedId[];
       return user.id;
     });
   }
@@ -153,9 +150,9 @@ export class AuthRepository {
         .where('rt.expires_at', '>', transaction.fn.now())
         .where('u.status', 'ACTIVE')
         .whereNull('u.deleted_at')
-        .select('rt.id as id', 'rt.user_id as user_id')
+        .select('rt.id', 'rt.user_id')
         .forUpdate()
-        .first<RefreshTokenRow>();
+        .first();
 
       if (!current) return false;
 
@@ -207,11 +204,11 @@ export class AuthRepository {
         .where('expires_at', '>', transaction.fn.now())
         .select('id', 'user_id')
         .forUpdate()
-        .first<ResetTokenRow>();
+        .first();
 
       if (!token) return false;
 
-      const [user] = (await transaction('users')
+      const [user] = await transaction('users')
         .where('id', token.user_id)
         .where('status', 'ACTIVE')
         .whereNull('deleted_at')
@@ -219,7 +216,7 @@ export class AuthRepository {
           password_hash: passwordHash,
           updated_at: transaction.fn.now(),
         })
-        .returning('id')) as unknown as InsertedId[];
+        .returning('id');
 
       if (!user) return false;
 
@@ -234,28 +231,5 @@ export class AuthRepository {
 
       return true;
     });
-  }
-
-  async findStudentProfile(): Promise<{
-    id: number;
-    name: string;
-    role: UserRole;
-  } | null> {
-    const profile = await this.db('profiles')
-      .where('role', 'STUDENT')
-      .where('status', 'ACTIVE')
-      .whereNull('deleted_at')
-      .first<{ id: number; name: string; role: UserRole }>([
-        'id',
-        'name',
-        'role',
-      ]);
-
-    return profile ?? null;
-  }
-
-  toAuthenticatedUser(account: AuthAccount): AuthenticatedUser {
-    const { passwordHash: _passwordHash, ...user } = account;
-    return user;
   }
 }

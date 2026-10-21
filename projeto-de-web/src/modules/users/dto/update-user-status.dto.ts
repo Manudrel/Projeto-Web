@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
-import type { UserStatus } from '../../auth/auth.types.js';
+import type { UserStatus } from '../user.entity.js';
 
 export class UpdateUserStatusDto {
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'], example: 'INACTIVE' })

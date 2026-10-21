@@ -1,13 +1,12 @@
-import type { UserStatus } from '../auth/auth.types.js';
+export type UserRole = 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
+export type UserStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface User {
   id: number;
   name: string;
   email: string;
-  passwordHash: string;
   status: UserStatus;
-  profileId: number;
+  profile: { id: number; name: string; role: UserRole };
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
 }

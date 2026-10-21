@@ -89,7 +89,7 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   await knex('users')
-    .insert(demoUsers)
-    .onConflict('email')
-    .merge(['name', 'password_hash', 'status', 'profile_id', 'deleted_at']);
+    .insert(users)
+    .onConflict()
+    .ignore();
 }

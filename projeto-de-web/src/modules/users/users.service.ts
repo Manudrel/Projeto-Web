@@ -6,11 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import bcrypt from 'bcrypt';
-import type { AuthenticatedUser, UserStatus } from '../auth/auth.types.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { ListUsersDto } from './dto/list-users.dto.js';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
+import type { UserStatus } from './user.entity.js';
 import { UsersRepository } from './users.repository.js';
 
 @Injectable()
@@ -41,40 +42,32 @@ export class UsersService {
       throw new ConflictException('Já existe um usuário com esse e-mail.');
     }
 
-    try {
-      const id = await this.usersRepository.create(
-        data,
-        email,
-        await bcrypt.hash(data.password, 12),
-      );
-      const user = await this.usersRepository.findById(id);
-      if (!user) throw new NotFoundException('Usuário criado não foi encontrado.');
-      return user;
-    } catch (error: unknown) {
-      if (this.isUniqueViolation(error)) {
-        throw new ConflictException('Já existe um usuário com esse e-mail.');
-      }
-      throw error;
-    }
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const id = await this.usersRepository.create(data, email, passwordHash);
+
+    const user = await this.usersRepository.findById(id);
+    if (!user) throw new NotFoundException('Usuário criado não foi encontrado.');
+    return user;
   }
 
   async update(id: number, data: UpdateUserDto, actor: AuthenticatedUser) {
-    this.assertAdministratorOrOwner(actor, id);
+    this.assertAdministratorWithPermissionOrOwner(actor, id, 'users:update');
     const current = await this.usersRepository.findById(id);
     if (!current) throw new NotFoundException('Usuário não encontrado.');
     if (data.name === undefined && data.email === undefined && data.profileId === undefined) {
       throw new BadRequestException('Informe ao menos um campo para atualizar.');
     }
-    if (actor.id === id && actor.profile.role !== 'ADMIN' && data.profileId !== undefined) {
-      throw new ForbiddenException('Você não pode alterar o próprio perfil.');
+    if (
+      data.profileId !== undefined &&
+      (actor.profile.role !== 'ADMIN' ||
+        !actor.permissions.includes('users:update'))
+    ) {
+      throw new ForbiddenException('Você não pode alterar o perfil do usuário.');
     }
 
-    const update: UpdateUserDto & { email?: string } = { ...data };
-    if (data.email !== undefined) {
-      update.email = data.email.trim().toLowerCase();
-      if (await this.usersRepository.findEmailOwner(update.email, id)) {
-        throw new ConflictException('Já existe um usuário com esse e-mail.');
-      }
+    const email = data.email?.trim().toLowerCase();
+    if (email !== undefined && await this.usersRepository.findEmailOwner(email, id)) {
+      throw new ConflictException('Já existe um usuário com esse e-mail.');
     }
     if (data.profileId !== undefined) {
       const profile = await this.usersRepository.findProfile(data.profileId);
@@ -84,17 +77,14 @@ export class UsersService {
       }
     }
 
-    try {
-      const result = await this.usersRepository.updateUser(id, update);
-      if (result === 'not_found') throw new NotFoundException('Usuário não encontrado.');
-      if (result === 'last_admin') {
-        throw new ConflictException('Não é possível remover o último ADMIN ativo.');
-      }
-    } catch (error: unknown) {
-      if (this.isUniqueViolation(error)) {
-        throw new ConflictException('Já existe um usuário com esse e-mail.');
-      }
-      throw error;
+    const result = await this.usersRepository.updateUser(id, {
+      name: data.name,
+      email,
+      profileId: data.profileId,
+    });
+    if (result === 'not_found') throw new NotFoundException('Usuário não encontrado.');
+    if (result === 'last_admin') {
+      throw new ConflictException('Não é possível remover o último ADMIN ativo.');
     }
 
     const user = await this.usersRepository.findById(id);
@@ -134,7 +124,7 @@ export class UsersService {
     data: UpdateUserPasswordDto,
     actor: AuthenticatedUser,
   ): Promise<{ message: string }> {
-    this.assertAdministratorOrOwner(actor, id);
+    this.assertAdministratorWithPermissionOrOwner(actor, id, 'users:password');
     const passwordHash = await this.usersRepository.findPasswordHash(id);
     if (!passwordHash) throw new NotFoundException('Usuário não encontrado.');
 
@@ -170,12 +160,16 @@ export class UsersService {
     }
   }
 
-  private isUniqueViolation(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === '23505'
-    );
+  private assertAdministratorWithPermissionOrOwner(
+    actor: AuthenticatedUser,
+    userId: number,
+    permission: string,
+  ): void {
+    if (
+      actor.id !== userId &&
+      (actor.profile.role !== 'ADMIN' || !actor.permissions.includes(permission))
+    ) {
+      throw new ForbiddenException('Você não tem permissão para alterar este usuário.');
+    }
   }
 }
