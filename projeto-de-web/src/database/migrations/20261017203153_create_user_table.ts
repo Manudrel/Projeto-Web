@@ -4,7 +4,7 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('users', (table) => {
     table.increments('id').primary();
     table.string('name', 150).notNullable();
-    table.string('email', 200).notNullable().unique();
+    table.string('email', 200).notNullable();
     table.string('password_hash', 255).notNullable();
     table.string('status', 10).notNullable().defaultTo('ACTIVE');
     table
@@ -29,7 +29,7 @@ export async function up(knex: Knex): Promise<void> {
     "ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('ACTIVE', 'INACTIVE'))",
   );
   await knex.raw(
-    'CREATE UNIQUE INDEX users_email_lower_unique ON users (LOWER(email))',
+    'CREATE UNIQUE INDEX users_email_lower_unique ON users (LOWER(email)) WHERE deleted_at IS NULL',
   );
 }
 

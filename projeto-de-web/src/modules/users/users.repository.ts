@@ -1,56 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
-import type { UserRole, UserStatus } from '../auth/auth.types.js';
 import type { CreateUserDto } from './dto/create-user.dto.js';
 import type { ListUsersDto } from './dto/list-users.dto.js';
 import type { UpdateUserDto } from './dto/update-user.dto.js';
-
-export interface UserResponse {
-  id: number;
-  name: string;
-  email: string;
-  status: UserStatus;
-  profile: { id: number; name: string; role: UserRole };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface UserQueryRow {
-  id: number;
-  name: string;
-  email: string;
-  status: UserStatus;
-  profileId: number;
-  profileName: string;
-  profileRole: UserRole;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-}
-
-interface UserPasswordHashRow {
-  passwordHash: string;
-}
-
-interface UserSecurityRow {
-  id: number;
-  status: UserStatus;
-  profileRole: UserRole;
-  profileStatus: UserStatus;
-}
+import type { User, UserRole, UserStatus } from './user.entity.js';
 
 @Injectable()
 export class UsersRepository {
   constructor(@Inject('KNEX') private readonly db: Knex) {}
 
-  async findAll(filters: ListUsersDto) {
+  async findAll(filters: ListUsersDto): Promise<User[]> {
     const query = this.usersQuery(this.db);
     if (filters.status) query.where('u.status', filters.status);
     if (filters.profileId) query.where('u.profile_id', filters.profileId);
-
-    const countRows = (await query.clone().count({ total: 'u.id' })) as unknown as Array<{
-      total: number | string;
-    }>;
-    const total = Number(countRows[0]?.total ?? 0);
 
     let orderColumn = 'u.id';
     switch (filters.sortBy) {
@@ -68,12 +30,12 @@ export class UsersRepository {
         break;
     }
 
-    const rows = (await query
+    const rows = await query
       .select(
-        'u.id as id',
-        'u.name as name',
-        'u.email as email',
-        'u.status as status',
+        'u.id',
+        'u.name',
+        'u.email',
+        'u.status',
         'p.id as profileId',
         'p.name as profileName',
         'p.role as profileRole',
@@ -82,35 +44,53 @@ export class UsersRepository {
       )
       .orderBy(orderColumn, filters.order)
       .limit(filters.limit)
-      .offset((filters.page - 1) * filters.limit)) as unknown as UserQueryRow[];
+      .offset((filters.page - 1) * filters.limit);
 
-    return {
-      data: rows.map((row) => this.toUserResponse(row)),
-      meta: {
-        total,
-        page: filters.page,
-        limit: filters.limit,
-        totalPages: Math.ceil(total / filters.limit),
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      status: row.status,
+      profile: {
+        id: row.profileId,
+        name: row.profileName,
+        role: row.profileRole,
       },
-    };
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
   }
 
-  async findById(id: number): Promise<UserResponse | null> {
-    const row = (await this.usersQuery(this.db)
+  async findById(id: number): Promise<User | null> {
+    const row = await this.usersQuery(this.db)
       .where('u.id', id)
       .select(
-        'u.id as id',
-        'u.name as name',
-        'u.email as email',
-        'u.status as status',
+        'u.id',
+        'u.name',
+        'u.email',
+        'u.status',
         'p.id as profileId',
         'p.name as profileName',
         'p.role as profileRole',
         'u.created_at as createdAt',
         'u.updated_at as updatedAt',
       )
-      .first()) as unknown as UserQueryRow | undefined;
-    return row ? this.toUserResponse(row) : null;
+      .first();
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      status: row.status,
+      profile: {
+        id: row.profileId,
+        name: row.profileName,
+        role: row.profileRole,
+      },
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
   }
 
   async findEmailOwner(email: string, ignoreUserId?: number): Promise<number | null> {
@@ -118,7 +98,7 @@ export class UsersRepository {
       .whereRaw('LOWER(email) = ?', [email.toLowerCase()])
       .whereNull('deleted_at');
     if (ignoreUserId !== undefined) query.whereNot('id', ignoreUserId);
-    const row = (await query.first('id')) as { id: number } | undefined;
+    const row = await query.first('id');
     return row?.id ?? null;
   }
 
@@ -127,22 +107,22 @@ export class UsersRepository {
     status: UserStatus;
     role: UserRole;
   } | null> {
-    const row = (await this.db('profiles')
+    const row = await this.db('profiles')
       .where('id', profileId)
       .whereNull('deleted_at')
-      .first('id', 'status', 'role')) as { id: number; status: UserStatus; role: UserRole } | undefined;
+      .first('id', 'status', 'role');
     return row ?? null;
   }
 
   async create(data: CreateUserDto, email: string, passwordHash: string): Promise<number> {
-    const rows = (await this.db('users')
+    const rows = await this.db('users')
       .insert({
         name: data.name.trim(),
         email,
         password_hash: passwordHash,
         profile_id: data.profileId,
       })
-      .returning('id')) as unknown as Array<{ id: number }>;
+      .returning('id');
     return rows[0].id;
   }
 
@@ -151,16 +131,16 @@ export class UsersRepository {
     data: UpdateUserDto & { email?: string },
   ): Promise<'not_found' | 'last_admin' | 'updated'> {
     return this.db.transaction(async (transaction) => {
-      const current = (await this.usersQuery(transaction)
+      const current = await this.usersQuery(transaction)
         .where('u.id', id)
         .select(
-          'u.id as id',
-          'u.status as status',
+          'u.id',
+          'u.status',
           'p.role as profileRole',
           'p.status as profileStatus',
         )
         .forUpdate('u')
-        .first()) as unknown as UserSecurityRow | undefined;
+        .first();
       if (!current) return 'not_found';
 
       if (
@@ -198,12 +178,10 @@ export class UsersRepository {
   }
 
   async findPasswordHash(id: number): Promise<string | null> {
-    const row = (await this.db('users')
+    const row = await this.db('users')
       .where('id', id)
       .whereNull('deleted_at')
-      .first('password_hash as passwordHash')) as
-      | UserPasswordHashRow
-      | undefined;
+      .first('password_hash as passwordHash');
     return row?.passwordHash ?? null;
   }
 
@@ -230,16 +208,16 @@ export class UsersRepository {
     status: UserStatus,
   ): Promise<'not_found' | 'last_admin' | 'updated'> {
     return this.db.transaction(async (transaction) => {
-      const user = (await this.usersQuery(transaction)
+      const user = await this.usersQuery(transaction)
         .where('u.id', id)
         .select(
-          'u.id as id',
-          'u.status as status',
+          'u.id',
+          'u.status',
           'p.role as profileRole',
           'p.status as profileStatus',
         )
         .forUpdate('u')
-        .first()) as unknown as UserSecurityRow | undefined;
+        .first();
       if (!user) return 'not_found';
       if (user.status === status) return 'updated';
 
@@ -263,16 +241,16 @@ export class UsersRepository {
 
   async softDelete(id: number): Promise<'not_found' | 'last_admin' | 'deleted'> {
     return this.db.transaction(async (transaction) => {
-      const user = (await this.usersQuery(transaction)
+      const user = await this.usersQuery(transaction)
         .where('u.id', id)
         .select(
-          'u.id as id',
-          'u.status as status',
+          'u.id',
+          'u.status',
           'p.role as profileRole',
           'p.status as profileStatus',
         )
         .forUpdate('u')
-        .first()) as unknown as UserSecurityRow | undefined;
+        .first();
       if (!user) return 'not_found';
 
       if (
@@ -299,22 +277,6 @@ export class UsersRepository {
       .whereNull('p.deleted_at');
   }
 
-  private toUserResponse(row: UserQueryRow): UserResponse {
-    return {
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      status: row.status,
-      profile: { id: row.profileId, name: row.profileName, role: row.profileRole },
-      createdAt: this.toIsoString(row.createdAt),
-      updatedAt: this.toIsoString(row.updatedAt),
-    };
-  }
-
-  private toIsoString(value: Date | string): string {
-    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-  }
-
   private async lockAdminProfile(transaction: Knex.Transaction): Promise<void> {
     await transaction('profiles').where('role', 'ADMIN').forUpdate().first('id');
   }
@@ -323,7 +285,7 @@ export class UsersRepository {
     transaction: Knex.Transaction,
     excludedUserId: number,
   ): Promise<boolean> {
-    const rows = (await transaction('users as u')
+    const rows = await transaction('users as u')
       .innerJoin('profiles as p', 'p.id', 'u.profile_id')
       .where('p.role', 'ADMIN')
       .where('p.status', 'ACTIVE')
@@ -331,7 +293,7 @@ export class UsersRepository {
       .whereNull('u.deleted_at')
       .whereNull('p.deleted_at')
       .whereNot('u.id', excludedUserId)
-      .count({ total: 'u.id' })) as unknown as Array<{ total: number | string }>;
+      .count({ total: 'u.id' });
     return Number(rows[0]?.total ?? 0) > 0;
   }
 

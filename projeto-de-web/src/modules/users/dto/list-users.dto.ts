@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
-import type { UserStatus } from '../../auth/auth.types.js';
+import type { UserStatus } from '../user.entity.js';
 
 const USER_SORT_FIELDS = ['id', 'name', 'email', 'status', 'createdAt'] as const;
 
@@ -40,9 +40,9 @@ export class ListUsersDto {
   @IsIn(USER_SORT_FIELDS)
   sortBy: (typeof USER_SORT_FIELDS)[number] = 'id';
 
-  @ApiPropertyOptional({ description: 'Direção da ordenação', enum: ['asc', 'desc'], default: 'asc' })
+  @ApiPropertyOptional({ description: 'Direção da ordenação', enum: ['asc', 'desc'], default: 'desc' })
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? 'asc' : value))
+  @Transform(({ value }) => (value === '' ? 'desc' : value))
   @IsIn(['asc', 'desc'])
-  order: 'asc' | 'desc' = 'asc';
+  order: 'asc' | 'desc' = 'desc';
 }

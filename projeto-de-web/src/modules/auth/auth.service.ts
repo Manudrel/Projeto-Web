@@ -21,11 +21,6 @@ import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
 
-interface IssuedRefreshToken {
-  token: string;
-  hash: string;
-  expiresAt: Date;
-}
 
 @Injectable()
 export class AuthService {
@@ -39,36 +34,38 @@ export class AuthService {
 
   async register(data: RegisterDto): Promise<AuthenticatedUser> {
     const email = data.email.trim().toLowerCase();
-    const passwordHash = await bcrypt.hash(data.password, 12);
-
-    try {
-      const userId = await this.repository.createStudentUser(
-        data.name.trim(),
-        email,
-        passwordHash,
-      );
-
-      if (userId === null) {
-        throw new InternalServerErrorException(
-          'O perfil STUDENT ativo não está cadastrado. Execute as migrations e seeds de autenticação.',
-        );
-      }
-
-      const account = await this.repository.findAccountById(userId);
-      if (!account) {
-        throw new InternalServerErrorException(
-          'Não foi possível carregar o usuário criado.',
-        );
-      }
-
-      return this.repository.toAuthenticatedUser(account);
-    } catch (error: unknown) {
-      if (this.isUniqueViolation(error)) {
-        throw new ConflictException('Já existe uma conta com esse e-mail.');
-      }
-
-      throw error;
+    if (await this.repository.emailExists(email)) {
+      throw new ConflictException('Já existe uma conta com esse e-mail.');
     }
+
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const userId = await this.repository.createStudentUser(
+      data.name.trim(),
+      email,
+      passwordHash,
+    );
+
+    if (userId === null) {
+      throw new InternalServerErrorException(
+        'O perfil STUDENT ativo não está cadastrado. Execute as migrations e seeds de autenticação.',
+      );
+    }
+
+    const account = await this.repository.findAccountById(userId);
+    if (!account) {
+      throw new InternalServerErrorException(
+        'Não foi possível carregar o usuário criado.',
+      );
+    }
+
+    return {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      status: account.status,
+      profile: account.profile,
+      permissions: account.permissions,
+    };
   }
 
   async login(data: LoginDto) {
@@ -201,7 +198,14 @@ export class AuthService {
       throw new UnauthorizedException('A conta não está ativa.');
     }
 
-    return this.repository.toAuthenticatedUser(account);
+    return {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      status: account.status,
+      profile: account.profile,
+      permissions: account.permissions,
+    };
   }
 
   private async createSession(account: {
@@ -250,7 +254,7 @@ export class AuthService {
         token: refreshToken,
         hash: this.hashToken(refreshToken),
         expiresAt: refreshExpiresAt,
-      } satisfies IssuedRefreshToken,
+      }
     };
   }
 
@@ -276,14 +280,5 @@ export class AuthService {
     };
 
     return value * multiplier[unit];
-  }
-
-  private isUniqueViolation(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === '23505'
-    );
   }
 }
