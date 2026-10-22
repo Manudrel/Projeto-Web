@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException, } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException, } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AssessmentType } from './assessment.entity.js';
 import { AssessmentsRepository } from './assessments.repository.js';
@@ -29,7 +29,7 @@ export class AssessmentsService {
 
   async create(data: CreateAssessmentDto, user: AuthenticatedUser) {
     if (data.type === AssessmentType.MODULE && !data.moduleId) {
-      throw new BadRequestException('Avaliações do tipo MODULE exigem um moduleId');
+      throw new UnprocessableEntityException('Avaliações do tipo MODULE exigem um moduleId');
     }
 
     const course = await this.assessmentsRepository.findCourseById(data.courseId);
@@ -48,7 +48,7 @@ export class AssessmentsService {
       }
 
       if (courseModule.courseId !== data.courseId) {
-        throw new BadRequestException('O módulo não pertence ao curso informado');
+        throw new UnprocessableEntityException('O módulo não pertence ao curso informado');
       }
     }
 
@@ -69,7 +69,7 @@ export class AssessmentsService {
     const targetType = data.type !== undefined ? data.type : assessment.type;
 
     if (targetType === AssessmentType.MODULE && !targetModuleId) {
-      throw new BadRequestException('Avaliações do tipo MODULE exigem um moduleId');
+      throw new UnprocessableEntityException('Avaliações do tipo MODULE exigem um moduleId');
     }
 
     if (data.moduleId) {
@@ -80,7 +80,7 @@ export class AssessmentsService {
       }
 
       if (courseModule.courseId !== assessment.courseId) {
-        throw new BadRequestException('O módulo não pertence ao curso informado');
+        throw new UnprocessableEntityException('O módulo não pertence ao curso informado');
       }
     }
 
@@ -114,18 +114,17 @@ export class AssessmentsService {
       throw new UnprocessableEntityException('Apenas alunos com matrícula ativa podem realizar tentativas de avaliação');
     }
 
-    const attempts = await this.assessmentsRepository.findAttempts(assessmentId, data.enrollmentId);
+    const approvedAttempt = await this.assessmentsRepository.findApprovedAttempt(assessmentId, data.enrollmentId);
 
-    const alreadyApproved = attempts.some((attempt) => attempt.isApproved);
-    if (alreadyApproved) {
+    if (approvedAttempt) {
       throw new ConflictException('Esta avaliação já foi aprovada anteriormente nesta matrícula');
     }
 
-    const nextAttemptNumber = attempts.length + 1;
+    const totalAttempts = await this.assessmentsRepository.countAttempts(assessmentId, data.enrollmentId);
+
+    const nextAttemptNumber = totalAttempts + 1;
     if (nextAttemptNumber > assessment.maxAttempts) {
-      throw new UnprocessableEntityException(
-        `Limite de tentativas atingido para esta avaliação (${assessment.maxAttempts})`,
-      );
+      throw new UnprocessableEntityException(`Limite de tentativas atingido para esta avaliação (${assessment.maxAttempts})`);
     }
 
     const isApproved = data.score >= assessment.minScoreToPass;

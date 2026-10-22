@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
+import { AssessmentType } from './assessment.entity.js';
 import { CreateAssessmentDto } from './dto/create-assessment.dto.js';
 import { ListAssessmentsDto } from './dto/list-assessments.dto.js';
 import { UpdateAssessmentDto } from './dto/update-assessment.dto.js';
@@ -15,6 +16,16 @@ const assessmentColumns = [
   'created_at as createdAt',
   'updated_at as updatedAt',
   'deleted_at as deletedAt',
+];
+
+const attemptColumns = [
+  'id',
+  'enrollment_id as enrollmentId',
+  'assessment_id as assessmentId',
+  'score',
+  'is_approved as isApproved',
+  'attempt_number as attemptNumber',
+  'created_at as createdAt',
 ];
 
 @Injectable()
@@ -74,7 +85,14 @@ export class AssessmentsRepository {
   }
 
   async update(id: number, data: UpdateAssessmentDto) {
-    const updatePayload: Record<string, any> = {
+    const updatePayload: {
+      title?: string;
+      module_id?: number | null;
+      type?: AssessmentType;
+      min_score_to_pass?: number;
+      max_attempts?: number;
+      updated_at: Knex.Raw;
+    } = {
       updated_at: this.db.fn.now(),
     };
 
@@ -108,6 +126,29 @@ export class AssessmentsRepository {
       .first();
   }
 
+  findApprovedAttempt(assessmentId: number, enrollmentId: number) {
+    return this.db('assessment_attempts')
+      .where({
+        assessment_id: assessmentId,
+        enrollment_id: enrollmentId,
+        is_approved: true,
+      })
+      .select('id')
+      .first();
+  }
+
+  async countAttempts(assessmentId: number, enrollmentId: number) {
+    const result = await this.db('assessment_attempts')
+      .where({
+        assessment_id: assessmentId,
+        enrollment_id: enrollmentId,
+      })
+      .count<{ total: string | number }>('id as total')
+      .first();
+
+    return Number(result?.total ?? 0);
+  }
+
   findAttempts(assessmentId: number, enrollmentId?: number) {
     const query = this.db('assessment_attempts')
       .where('assessment_id', assessmentId);
@@ -115,15 +156,7 @@ export class AssessmentsRepository {
     if (enrollmentId) query.where('enrollment_id', enrollmentId);
 
     return query
-      .select([
-        'id',
-        'enrollment_id as enrollmentId',
-        'assessment_id as assessmentId',
-        'score',
-        'is_approved as isApproved',
-        'attempt_number as attemptNumber',
-        'created_at as createdAt',
-      ])
+      .select(attemptColumns)
       .orderBy('attempt_number', 'asc');
   }
 
@@ -159,15 +192,7 @@ export class AssessmentsRepository {
         is_approved: data.isApproved,
         attempt_number: data.attemptNumber,
       })
-      .returning([
-        'id',
-        'enrollment_id as enrollmentId',
-        'assessment_id as assessmentId',
-        'score',
-        'is_approved as isApproved',
-        'attempt_number as attemptNumber',
-        'created_at as createdAt',
-      ]);
+      .returning(attemptColumns);
 
     return attempt;
   }
