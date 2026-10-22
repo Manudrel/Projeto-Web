@@ -82,8 +82,7 @@ export class ProgressRepository {
 
       await this.recalculate(trx, enrollmentId, courseId);
 
-      const createdId = typeof created === 'object' && created !== null ? created.id : created;
-      return Number(createdId);
+      return Number(created.id);
     });
   }
 
@@ -98,30 +97,33 @@ export class ProgressRepository {
   }
 
   private async recalculate(trx: Knex.Transaction, enrollmentId: number, courseId: number) {
-    const lessons = () => trx('lessons')
+    const totalRow = await trx('lessons')
       .join('modules', 'modules.id', 'lessons.module_id')
       .where('modules.course_id', courseId)
       .whereNull('modules.deleted_at')
-      .where('lessons.status', 'ACTIVE');
+      .count<{ total: string | number }>('lessons.id as total')
+      .first();
 
-    const totalRow = await lessons().count<{ total: string }>('lessons.id as total').first();
-
-    const doneRow = await lessons()
+    const doneRow = await trx('lessons')
+      .join('modules', 'modules.id', 'lessons.module_id')
       .join('progress', 'progress.lesson_id', 'lessons.id')
+      .where('modules.course_id', courseId)
+      .whereNull('modules.deleted_at')
       .where('progress.enrollment_id', enrollmentId)
       .where('progress.completed', true)
-      .count<{ total: string }>('lessons.id as total')
+      .count<{ total: string | number }>('lessons.id as total')
       .first();
 
     const total = Number(totalRow?.total ?? 0);
     const done = Number(doneRow?.total ?? 0);
-    const percentage = total > 0 ? Math.min(100, Math.round((done / total) * 10000) / 100) : 0;
+    const isCompleted = total > 0 && done === total;
+    const percentage = total > 0 ? Math.min(100, Number(((done / total) * 100).toFixed(2))) : 0;
 
     await trx('enrollments')
       .where('id', enrollmentId)
       .update({
         progress: percentage,
-        status: percentage >= 100 ? 'COMPLETED' : 'ACTIVE',
+        status: isCompleted ? 'COMPLETED' : 'ACTIVE',
         updated_at: trx.fn.now(),
       });
   }

@@ -18,12 +18,10 @@ export class ProgressService {
   findAll(filters: ListProgressDto, user: AuthenticatedUser) {
     const role = user.profile.role;
 
-    // RN-10 -> Isolamento do aluno: só enxerga o próprio progresso
+    // RN-10 -> Aluno só enxerga o próprio progresso
     if (role === 'STUDENT') {
       if (filters.userId && filters.userId !== user.id) {
-        throw new ForbiddenException(
-          'Você não tem permissão para consultar o progresso de outro aluno',
-        );
+        throw new ForbiddenException('Você não tem permissão para consultar o progresso de outro aluno');
       }
       filters.userId = user.id;
     }
