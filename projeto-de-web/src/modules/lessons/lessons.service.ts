@@ -47,7 +47,7 @@ export class LessonsService {
         'Não é possível criar aula em um módulo inativo',
       );
     }
-
+    //RN 8 -> Ordem da aula FEITO
     const lessonCount = await this.lessonsRepository.countByModule(data.moduleId);
     const order = data.order ?? lessonCount + 1;
     if (order > lessonCount + 1) {
@@ -180,6 +180,7 @@ export class LessonsService {
     throw new ForbiddenException('Voce nao tem acesso a esta aula.');
   }
 
+  //RN 9 -> Propriedade do instrutor FEITO  
   private async ensureCanManageModule(
     moduleId: number,
     user: AuthenticatedUser,

@@ -1,27 +1,27 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 
 export async function seed(knex: Knex): Promise<void> {
-
-  await knex('profiles').del();
-
-  await knex('profiles').insert([
-    {
-      name: 'Administrator',
-      role: 'ADMIN',
-      description: 'Full platform access',
-      status: 'ACTIVE',
-    },
-    {
-      name: 'Instructor',
-      role: 'INSTRUCTOR',
-      description: 'Manages owned courses',
-      status: 'ACTIVE',
-    },
-    {
-      name: 'Student',
-      role: 'STUDENT',
-      description: 'Learns and tracks course progress',
-      status: 'ACTIVE',
-    },
-  ]);
+  await knex('profiles')
+    .insert([
+      {
+        name: 'Administrator',
+        role: 'ADMIN',
+        description: 'Acesso completo à plataforma',
+        status: 'ACTIVE',
+      },
+      {
+        name: 'Instructor',
+        role: 'INSTRUCTOR',
+        description: 'Gerencia cursos próprios',
+        status: 'ACTIVE',
+      },
+      {
+        name: 'Student',
+        role: 'STUDENT',
+        description: 'Estuda e acompanha o progresso dos cursos',
+        status: 'ACTIVE',
+      },
+    ])
+    .onConflict('role')
+    .merge(['name', 'description', 'status']);
 }

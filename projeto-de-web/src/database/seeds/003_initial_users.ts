@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import type { Knex } from 'knex';
 
@@ -12,7 +13,7 @@ export async function seed(knex: Knex): Promise<void> {
 
   if (!email || !password) {
     throw new Error(
-      'SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set before running the user seed.',
+      'SEED_ADMIN_EMAIL e SEED_ADMIN_PASSWORD devem ser definidos antes de executar o seed de usuários.',
     );
   }
 
@@ -25,51 +26,88 @@ export async function seed(knex: Knex): Promise<void> {
 
   if (!adminProfile) {
     throw new Error(
-      'ADMIN profile was not found. Run the 001_auth_base seed first.',
+      'Perfil de ADMIN não encontrado. Execute o seed 001_auth_base primeiro.',
     );
   }
 
   if (!instructorProfile || !studentProfile) {
     throw new Error(
-      'INSTRUCTOR and STUDENT profiles were not found. Run the 001_auth_base seed first.',
+      'Perfis de INSTRUCTOR e STUDENT não encontrados. Execute o seed 001_auth_base primeiro.',
     );
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash1 = await bcrypt.hash(
+    randomBytes(24).toString('base64url'),
+    12,
+  );
+  const passwordHash2 = await bcrypt.hash(
+    randomBytes(24).toString('base64url'),
+    12,
+  );
+  const passwordHash3 = await bcrypt.hash(
+    randomBytes(24).toString('base64url'),
+    12,
+  );
+  const passwordHash4 = await bcrypt.hash(
+    randomBytes(24).toString('base64url'),
+    12,
+  );
   const users = [
     {
-      name: 'Platform Admin',
+      name: 'Carlinhos Admin',
       email,
       password_hash: passwordHash,
       status: 'ACTIVE',
       profile_id: adminProfile.id,
     },
-    ...Array.from({ length: 3 }, (_, index) => ({
-      name: `Test Instructor ${String(index + 1).padStart(2, '0')}`,
-      email: `instructor${String(index + 1).padStart(2, '0')}@example.com`,
-      password_hash: passwordHash,
-      status: index === 1 ? 'INACTIVE' : 'ACTIVE',
-      profile_id: instructorProfile.id,
-    })),
-    ...Array.from({ length: 6 }, (_, index) => ({
-      name: `Test Student ${String(index + 1).padStart(2, '0')}`,
-      email: `student${String(index + 1).padStart(2, '0')}@example.com`,
-      password_hash: passwordHash,
-      status: index === 2 ? 'INACTIVE' : 'ACTIVE',
-      profile_id: studentProfile.id,
-    })),
     {
-      name: 'Student Context Demo',
-      email: 'student.context@example.com',
+      name: 'Carlinhos Instrutor',
+      email: 'carlinhosinstrutor@example.com',
       password_hash: passwordHash,
+      status: 'ACTIVE',
+      profile_id: instructorProfile.id,
+    },
+    {
+      name: 'Carlinhos Estudante',
+      email: 'carlinhosestudante@example.com',
+      password_hash: passwordHash,
+      status: 'ACTIVE',
+      profile_id: studentProfile.id,
+    },
+    {
+      name: 'Estudante Exemplo 02',
+      email: 'student02@example.com',
+      password_hash: passwordHash1,
+      status: 'ACTIVE',
+      profile_id: studentProfile.id,
+    },
+    {
+      name: 'Estudante Exemplo 03',
+      email: 'student03@example.com',
+      password_hash: passwordHash2,
+      status: 'ACTIVE',
+      profile_id: studentProfile.id,
+    },
+    {
+      name: 'Estudante Exemplo 04',
+      email: 'student04@example.com',
+      password_hash: passwordHash3,
+      status: 'ACTIVE',
+      profile_id: studentProfile.id,
+    },
+    {
+      name: 'Estudante Exemplo 05',
+      email: 'student05@example.com',
+      password_hash: passwordHash4,
       status: 'ACTIVE',
       profile_id: studentProfile.id,
     },
   ];
 
-  const [adminUser, ...demoUsers] = users;
+  const [adminUser] = users;
   const existingSeedAdmin = await knex('users')
-    .where({ name: 'Platform Admin', profile_id: adminProfile.id })
+    .where({ email, profile_id: adminProfile.id })
     .orderBy('id')
     .first('id');
 
@@ -84,7 +122,7 @@ export async function seed(knex: Knex): Promise<void> {
   } else {
     await knex('users')
       .insert(adminUser)
-      .onConflict('email')
+      .onConflict(knex.raw('(LOWER(email)) WHERE deleted_at IS NULL'))
       .merge(['name', 'password_hash', 'status', 'profile_id', 'deleted_at']);
   }
 

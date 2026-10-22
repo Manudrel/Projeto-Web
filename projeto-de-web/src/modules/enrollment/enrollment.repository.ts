@@ -61,7 +61,10 @@ export class EnrollmentRepository {
     return this.db('courses')
       .where('id', courseId)
       .whereNull('deleted_at')
-      .first('is_published as isPublished');
+      .first(
+        'is_published as isPublished',
+        'instructor_id as instructorId',
+      );
   }
 
   async create(data: NewEnrollment) {
